@@ -1,0 +1,1 @@
+//eg recource with tenant filtering
