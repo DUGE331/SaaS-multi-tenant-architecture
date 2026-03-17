@@ -4,6 +4,8 @@ const cors = require('cors');
 const express = require('express');
 
 const authRoutes = require('./routes/authRoutes');
+const invitationRoutes = require('./routes/invitations');
+const membershipRoutes = require('./routes/memberships');
 const projectRoutes = require('./routes/projects');
 
 const app = express();
@@ -17,6 +19,8 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/auth', authRoutes);
+app.use('/invitations', invitationRoutes);
+app.use('/memberships', membershipRoutes);
 app.use('/projects', projectRoutes);
 
 app.use((err, req, res, next) => {

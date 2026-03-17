@@ -1,6 +1,7 @@
 const express = require('express');
 
 const requireAuth = require('../middleware/requireAuth');
+const requireRole = require('../middleware/requireRole');
 const validate = require('../middleware/validate');
 const db = require('../db');
 const { createProjectSchema } = require('../validation/projectSchemas');
@@ -22,7 +23,7 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/', validate(createProjectSchema), async (req, res, next) => {
+router.post('/', requireRole(['owner', 'admin']), validate(createProjectSchema), async (req, res, next) => {
   const { name, description } = req.body;
 
   try {
