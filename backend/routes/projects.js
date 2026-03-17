@@ -1,7 +1,9 @@
 const express = require('express');
 
 const requireAuth = require('../middleware/requireAuth');
+const validate = require('../middleware/validate');
 const db = require('../db');
+const { createProjectSchema } = require('../validation/projectSchemas');
 
 const router = express.Router();
 
@@ -20,19 +22,15 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', validate(createProjectSchema), async (req, res, next) => {
   const { name, description } = req.body;
-
-  if (!name || !name.trim()) {
-    return res.status(400).json({ error: 'Project name is required' });
-  }
 
   try {
     const [project] = await db('projects')
       .insert({
         tenant_id: req.user.tenantId,
-        name: name.trim(),
-        description: description ? description.trim() : null,
+        name,
+        description: description || null,
       })
       .returning(['id', 'tenant_id', 'name', 'description', 'status', 'created_at', 'updated_at']);
 

@@ -3,6 +3,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const db = require('../db');
+const requireAuth = require('../middleware/requireAuth');
+const validate = require('../middleware/validate');
+const { registerSchema, loginSchema } = require('../validation/authSchemas');
 
 const router = express.Router();
 
@@ -12,31 +15,66 @@ function signToken(payload) {
   });
 }
 
-router.post('/register', async (req, res, next) => {
-  const { tenantName, tenantSlug, fullName, email, password } = req.body;
+router.get('/me', requireAuth, async (req, res, next) => {
+  try {
+    const membership = await db('memberships')
+      .join('users', 'memberships.user_id', 'users.id')
+      .join('tenants', 'memberships.tenant_id', 'tenants.id')
+      .where('memberships.user_id', req.user.userId)
+      .andWhere('memberships.tenant_id', req.user.tenantId)
+      .select(
+        'users.id as user_id',
+        'users.email',
+        'users.full_name',
+        'users.is_active',
+        'tenants.id as tenant_id',
+        'tenants.name as tenant_name',
+        'tenants.slug as tenant_slug',
+        'tenants.status as tenant_status',
+        'memberships.role'
+      )
+      .first();
 
-  if (!tenantName || !tenantSlug || !fullName || !email || !password) {
-    return res.status(400).json({
-      error: 'tenantName, tenantSlug, fullName, email, and password are required',
+    if (!membership || !membership.is_active || membership.tenant_status !== 'active') {
+      return res.status(401).json({ error: 'Session is no longer valid' });
+    }
+
+    return res.json({
+      user: {
+        id: membership.user_id,
+        email: membership.email,
+        fullName: membership.full_name,
+      },
+      tenant: {
+        id: membership.tenant_id,
+        name: membership.tenant_name,
+        slug: membership.tenant_slug,
+        status: membership.tenant_status,
+      },
+      role: membership.role,
     });
+  } catch (error) {
+    return next(error);
   }
+});
+
+router.post('/register', validate(registerSchema), async (req, res, next) => {
+  const { tenantName, tenantSlug, fullName, email, password } = req.body;
 
   try {
     const result = await db.transaction(async (trx) => {
-      const normalizedEmail = email.trim().toLowerCase();
-      const normalizedSlug = tenantSlug.trim().toLowerCase();
       const passwordHash = await bcrypt.hash(password, 12);
 
       const [tenant] = await trx('tenants')
         .insert({
           name: tenantName.trim(),
-          slug: normalizedSlug,
+          slug: tenantSlug,
         })
         .returning(['id', 'name', 'slug', 'status']);
 
       const [user] = await trx('users')
         .insert({
-          email: normalizedEmail,
+          email,
           password_hash: passwordHash,
           full_name: fullName.trim(),
         })
@@ -74,22 +112,15 @@ router.post('/register', async (req, res, next) => {
   }
 });
 
-router.post('/login', async (req, res, next) => {
+router.post('/login', validate(loginSchema), async (req, res, next) => {
   const { email, password, tenantSlug } = req.body;
 
-  if (!email || !password || !tenantSlug) {
-    return res.status(400).json({ error: 'email, password, and tenantSlug are required' });
-  }
-
   try {
-    const normalizedEmail = email.trim().toLowerCase();
-    const normalizedSlug = tenantSlug.trim().toLowerCase();
-
     const membership = await db('memberships')
       .join('users', 'memberships.user_id', 'users.id')
       .join('tenants', 'memberships.tenant_id', 'tenants.id')
-      .where('users.email', normalizedEmail)
-      .andWhere('tenants.slug', normalizedSlug)
+      .where('users.email', email)
+      .andWhere('tenants.slug', tenantSlug)
       .select(
         'users.id as user_id',
         'users.email',
