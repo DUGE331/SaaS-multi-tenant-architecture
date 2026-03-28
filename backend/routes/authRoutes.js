@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const config = require('../config');
 const db = require('../db');
 const requireAuth = require('../middleware/requireAuth');
 const validate = require('../middleware/validate');
@@ -10,7 +11,7 @@ const { registerSchema, loginSchema } = require('../validation/authSchemas');
 const router = express.Router();
 
 function signToken(payload) {
-  return jwt.sign(payload, process.env.JWT_SECRET || 'dev-secret-change-me', {
+  return jwt.sign(payload, config.jwtSecret, {
     expiresIn: '1d',
   });
 }

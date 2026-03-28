@@ -1,6 +1,5 @@
-require('dotenv').config({ path: '../.env' });
-
 const jwt = require('jsonwebtoken');
+const config = require('../config');
 
 function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -12,7 +11,7 @@ function requireAuth(req, res, next) {
   const token = authHeader.replace('Bearer ', '').trim();
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret-change-me');
+    const payload = jwt.verify(token, config.jwtSecret);
     req.user = {
       userId: payload.userId,
       tenantId: payload.tenantId,

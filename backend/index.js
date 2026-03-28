@@ -1,17 +1,19 @@
-require('dotenv').config({ path: '../.env' });
-
 const cors = require('cors');
 const express = require('express');
 
+const config = require('./config');
 const authRoutes = require('./routes/authRoutes');
 const invitationRoutes = require('./routes/invitations');
 const membershipRoutes = require('./routes/memberships');
 const projectRoutes = require('./routes/projects');
 
 const app = express();
-const port = Number(process.env.SERVER_PORT || 5000);
 
-app.use(cors());
+app.use(
+  cors({
+    origin: config.corsOrigin,
+  })
+);
 app.use(express.json());
 
 app.get('/health', (req, res) => {
@@ -33,6 +35,6 @@ app.use((err, req, res, next) => {
   return res.status(500).json({ error: 'Internal server error' });
 });
 
-app.listen(port, () => {
-  console.log(`API listening on port ${port}`);
+app.listen(config.serverPort, () => {
+  console.log(`API listening on port ${config.serverPort}`);
 });

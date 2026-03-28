@@ -81,9 +81,21 @@ This prevents cross-tenant data access regardless of frontend behavior.
 ---
 
 # Run Locally
-`npm install
-npm run migrate
-npm run dev`
+1. Copy `.env.example` to `.env` and replace the placeholder values.
+2. Start PostgreSQL with `docker compose up -d`.
+3. Install dependencies in both apps:
+   `cd backend && npm install`
+   `cd frontend && npm install`
+4. Run migrations:
+   `cd backend && npm run migrate`
+5. Start the backend and frontend dev servers:
+   `cd backend && npm run dev`
+   `cd frontend && npm run dev`
+
+## Security Notes
+- The public repo is safe to share only if `.env` stays untracked.
+- `JWT_SECRET`, `POSTGRES_PASSWORD`, and other runtime secrets must come from `.env`.
+- This project is still development-oriented and not production-hardened yet.
 
 # Notes
 Full development log and architecture decisions are available in /docs.

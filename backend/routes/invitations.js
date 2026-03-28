@@ -4,6 +4,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const config = require('../config');
 const db = require('../db');
 const requireAuth = require('../middleware/requireAuth');
 const requireRole = require('../middleware/requireRole');
@@ -13,12 +14,12 @@ const { createInvitationSchema, acceptInvitationSchema } = require('../validatio
 const router = express.Router();
 
 function buildInvitationLink(token) {
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const frontendUrl = config.frontendUrl;
   return `${frontendUrl.replace(/\/$/, '')}/accept-invite?token=${token}`;
 }
 
 function signToken(payload) {
-  return jwt.sign(payload, process.env.JWT_SECRET || 'dev-secret-change-me', {
+  return jwt.sign(payload, config.jwtSecret, {
     expiresIn: '1d',
   });
 }
