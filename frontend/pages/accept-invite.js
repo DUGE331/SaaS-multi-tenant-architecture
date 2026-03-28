@@ -1,8 +1,10 @@
-import Link from 'next/link';
+import Link from 'next/link'; //Link is used to navigate between pages in your app (client-side)
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 
 import { acceptInvitationRequest, invitationDetailsRequest, setToken } from '../utils/api';
+import { hasFieldErrors, validateAcceptInvitationForm } from '../utils/validation'; 
+//“Go to ../utils/api.js and bring in these functions so I can use them here”
 
 const pageStyles = {
   minHeight: '100vh',
@@ -55,12 +57,19 @@ const buttonStyles = {
   cursor: 'pointer',
 };
 
+const fieldErrorTextStyles = {
+  marginTop: '6px',
+  fontSize: '12px',
+  color: '#b91c1c',
+};
+
 export default function AcceptInvitePage() {
   const router = useRouter();
   const { token } = router.query;
   const [invitation, setInvitation] = useState(null);
   const [form, setForm] = useState({ fullName: '', password: '' });
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -102,12 +111,30 @@ export default function AcceptInvitePage() {
 
   function handleChange(event) {
     const { name, value } = event.target;
+    setError('');
+    setFieldErrors((current) => {
+      if (!current[name]) {
+        return current;
+      }
+
+      const nextErrors = { ...current };
+      delete nextErrors[name];
+      return nextErrors;
+    });
     setForm((current) => ({ ...current, [name]: value }));
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
+    const nextFieldErrors = validateAcceptInvitationForm(form);
+
     setError('');
+    setFieldErrors(nextFieldErrors);
+
+    if (hasFieldErrors(nextFieldErrors)) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -120,7 +147,11 @@ export default function AcceptInvitePage() {
       setToken(response.token);
       await router.push('/');
     } catch (requestError) {
-      setError(requestError.message || 'Unable to accept invitation');
+      if (hasFieldErrors(requestError.fieldErrors || {})) {
+        setFieldErrors(requestError.fieldErrors);
+      } else {
+        setError(requestError.message || 'Unable to accept invitation');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -176,9 +207,13 @@ export default function AcceptInvitePage() {
                   type="text"
                   value={form.fullName}
                   onChange={handleChange}
-                  style={inputStyles}
+                  style={{
+                    ...inputStyles,
+                    borderColor: fieldErrors.fullName ? '#dc2626' : inputStyles.border,
+                  }}
                   required
                 />
+                {fieldErrors.fullName ? <p style={fieldErrorTextStyles}>{fieldErrors.fullName}</p> : null}
               </div>
 
               <div style={{ marginBottom: '24px' }}>
@@ -191,9 +226,13 @@ export default function AcceptInvitePage() {
                   type="password"
                   value={form.password}
                   onChange={handleChange}
-                  style={inputStyles}
+                  style={{
+                    ...inputStyles,
+                    borderColor: fieldErrors.password ? '#dc2626' : inputStyles.border,
+                  }}
                   required
                 />
+                {fieldErrors.password ? <p style={fieldErrorTextStyles}>{fieldErrors.password}</p> : null}
               </div>
 
               <button type="submit" style={buttonStyles} disabled={isSubmitting}>

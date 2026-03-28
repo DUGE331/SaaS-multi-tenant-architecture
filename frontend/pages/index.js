@@ -15,6 +15,7 @@ import {
     projectsRequest,
     updateMemberRoleRequest,
 } from '../utils/api';
+import { hasFieldErrors, validateInvitationForm, validateProjectForm } from '../utils/validation';
 
 const pageStyles = {
     minHeight: '100vh',
@@ -90,6 +91,18 @@ const labelStyles = {
     color: '#243b53',
 };
 
+const helperTextStyles = {
+    marginTop: '6px',
+    fontSize: '12px',
+    color: '#52606d',
+};
+
+const fieldErrorTextStyles = {
+    marginTop: '6px',
+    fontSize: '12px',
+    color: '#b91c1c',
+};
+
 const secondaryLinkStyles = {
     display: 'inline-flex',
     alignItems: 'center',
@@ -112,6 +125,8 @@ export default function HomePage() {
     const [membersError, setMembersError] = useState('');
     const [createError, setCreateError] = useState('');
     const [invitationError, setInvitationError] = useState('');
+    const [projectFieldErrors, setProjectFieldErrors] = useState({});
+    const [invitationFieldErrors, setInvitationFieldErrors] = useState({});
     const [invitationsError, setInvitationsError] = useState('');
     const [isCreating, setIsCreating] = useState(false);
     const [isCreatingInvitation, setIsCreatingInvitation] = useState(false);
@@ -218,6 +233,16 @@ export default function HomePage() {
 
     function handleProjectFieldChange(event) {
         const { name, value } = event.target;
+        setCreateError('');
+        setProjectFieldErrors((current) => {
+            if (!current[name]) {
+                return current;
+            }
+
+            const nextErrors = { ...current };
+            delete nextErrors[name];
+            return nextErrors;
+        });
         setProjectForm((current) => ({
             ...current,
             [name]: value,
@@ -226,7 +251,15 @@ export default function HomePage() {
 
     async function handleCreateProject(event) {
         event.preventDefault();
+        const nextFieldErrors = validateProjectForm(projectForm);
+
         setCreateError('');
+        setProjectFieldErrors(nextFieldErrors);
+
+        if (hasFieldErrors(nextFieldErrors)) {
+            return;
+        }
+
         setIsCreating(true);
 
         try {
@@ -240,8 +273,13 @@ export default function HomePage() {
                 name: '',
                 description: '',
             });
+            setProjectFieldErrors({});
         } catch (requestError) {
-            setCreateError(requestError.message || 'Unable to create project');
+            if (hasFieldErrors(requestError.fieldErrors || {})) {
+                setProjectFieldErrors(requestError.fieldErrors);
+            } else {
+                setCreateError(requestError.message || 'Unable to create project');
+            }
         } finally {
             setIsCreating(false);
         }
@@ -249,6 +287,16 @@ export default function HomePage() {
 
     function handleInvitationFieldChange(event) {
         const { name, value } = event.target;
+        setInvitationError('');
+        setInvitationFieldErrors((current) => {
+            if (!current[name]) {
+                return current;
+            }
+
+            const nextErrors = { ...current };
+            delete nextErrors[name];
+            return nextErrors;
+        });
         setInvitationForm((current) => ({
             ...current,
             [name]: value,
@@ -257,7 +305,15 @@ export default function HomePage() {
 
     async function handleCreateInvitation(event) {
         event.preventDefault();
+        const nextFieldErrors = validateInvitationForm(invitationForm);
+
         setInvitationError('');
+        setInvitationFieldErrors(nextFieldErrors);
+
+        if (hasFieldErrors(nextFieldErrors)) {
+            return;
+        }
+
         setIsCreatingInvitation(true);
 
         try {
@@ -273,8 +329,13 @@ export default function HomePage() {
                 email: '',
                 role: 'member',
             });
+            setInvitationFieldErrors({});
         } catch (requestError) {
-            setInvitationError(requestError.message || 'Unable to send invitation');
+            if (hasFieldErrors(requestError.fieldErrors || {})) {
+                setInvitationFieldErrors(requestError.fieldErrors);
+            } else {
+                setInvitationError(requestError.message || 'Unable to send invitation');
+            }
         } finally {
             setIsCreatingInvitation(false);
         }
@@ -504,9 +565,17 @@ export default function HomePage() {
                                             type="text"
                                             value={invitationForm.fullName}
                                             onChange={handleInvitationFieldChange}
-                                            style={inputStyles}
+                                            style={{
+                                                ...inputStyles,
+                                                borderColor: invitationFieldErrors.fullName ? '#dc2626' : inputStyles.border,
+                                            }}
                                             placeholder="Jane Doe"
                                         />
+                                        {invitationFieldErrors.fullName ? (
+                                            <p style={fieldErrorTextStyles}>{invitationFieldErrors.fullName}</p>
+                                        ) : (
+                                            <p style={helperTextStyles}>Optional, but useful for a more personal invite.</p>
+                                        )}
                                     </div>
 
                                     <div>
@@ -519,10 +588,16 @@ export default function HomePage() {
                                             type="email"
                                             value={invitationForm.email}
                                             onChange={handleInvitationFieldChange}
-                                            style={inputStyles}
+                                            style={{
+                                                ...inputStyles,
+                                                borderColor: invitationFieldErrors.email ? '#dc2626' : inputStyles.border,
+                                            }}
                                             placeholder="jane@tenant.com"
                                             required
                                         />
+                                        {invitationFieldErrors.email ? (
+                                            <p style={fieldErrorTextStyles}>{invitationFieldErrors.email}</p>
+                                        ) : null}
                                     </div>
 
                                     <div>
@@ -534,11 +609,17 @@ export default function HomePage() {
                                             name="role"
                                             value={invitationForm.role}
                                             onChange={handleInvitationFieldChange}
-                                            style={inputStyles}
+                                            style={{
+                                                ...inputStyles,
+                                                borderColor: invitationFieldErrors.role ? '#dc2626' : inputStyles.border,
+                                            }}
                                         >
                                             <option value="member">Member</option>
                                             <option value="admin">Admin</option>
                                         </select>
+                                        {invitationFieldErrors.role ? (
+                                            <p style={fieldErrorTextStyles}>{invitationFieldErrors.role}</p>
+                                        ) : null}
                                     </div>
                                 </div>
 
@@ -942,9 +1023,15 @@ export default function HomePage() {
                                             placeholder="Customer Portal"
                                             value={projectForm.name}
                                             onChange={handleProjectFieldChange}
-                                            style={inputStyles}
+                                            style={{
+                                                ...inputStyles,
+                                                borderColor: projectFieldErrors.name ? '#dc2626' : inputStyles.border,
+                                            }}
                                             required
                                         />
+                                        {projectFieldErrors.name ? (
+                                            <p style={fieldErrorTextStyles}>{projectFieldErrors.name}</p>
+                                        ) : null}
                                     </div>
 
                                     <div style={{ marginBottom: '18px' }}>
@@ -959,11 +1046,15 @@ export default function HomePage() {
                                             onChange={handleProjectFieldChange}
                                             style={{
                                                 ...inputStyles,
+                                                borderColor: projectFieldErrors.description ? '#dc2626' : inputStyles.border,
                                                 minHeight: '110px',
                                                 resize: 'vertical',
                                                 fontFamily: 'inherit',
                                             }}
                                         />
+                                        <p style={projectFieldErrors.description ? fieldErrorTextStyles : helperTextStyles}>
+                                            {projectFieldErrors.description || 'Optional. Keep it concise so the list stays readable.'}
+                                        </p>
                                     </div>
 
                                     <button type="submit" style={buttonStyles} disabled={isCreating}>

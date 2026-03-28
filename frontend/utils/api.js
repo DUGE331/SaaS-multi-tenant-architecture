@@ -2,6 +2,22 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost
 
 const TOKEN_KEY = 'saas_token';
 
+export class ApiError extends Error {
+    constructor(message, options = {}) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = options.status || 0;
+        this.details = options.details || [];
+        this.fieldErrors = this.details.reduce((errors, detail) => {
+            if (detail?.path && !errors[detail.path]) {
+                errors[detail.path] = detail.message;
+            }
+
+            return errors;
+        }, {});
+    }
+}
+
 export function getToken() {
     if (typeof window === 'undefined') {
         return null;
@@ -37,15 +53,24 @@ export async function apiRequest(path, options = {}) {
         headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-        ...options,
-        headers,
-    });
+    let response;
+
+    try {
+        response = await fetch(`${API_BASE_URL}${path}`, {
+            ...options,
+            headers,
+        });
+    } catch (error) {
+        throw new ApiError('Unable to reach the API. Check that the backend is running.');
+    }
 
     const data = await response.json().catch(() => null);
 
     if (!response.ok) {
-        throw new Error(data?.error || 'Request failed');
+        throw new ApiError(data?.error || 'Request failed', {
+            status: response.status,
+            details: data?.details,
+        });
     }
 
     return data;
