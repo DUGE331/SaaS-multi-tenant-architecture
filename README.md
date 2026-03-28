@@ -1,101 +1,131 @@
 # Multi-Tenant SaaS Architecture
 
-A multi-tenant SaaS app built with Node.js, Express, PostgreSQL, and Next.js, focused on tenant isolation, RBAC, and invitation-based onboarding.
+A full-stack multi-tenant SaaS example built with Node.js, Express, PostgreSQL, and Next.js. The project focuses on tenant isolation, role-based access control, invitation onboarding, and the backend patterns commonly used in real SaaS products.
 
-Built to understand real-world SaaS architecture — one of the most in-demand backend/cloud patterns across platforms like Upwork.
+## What This Project Demonstrates
 
----
+- Multi-tenant application design with shared infrastructure
+- Tenant-scoped authorization and data access
+- Invitation-driven onboarding flow
+- Membership-based RBAC across multiple tenants
+- Separation between frontend concerns and backend trust boundaries
 
-## 🖥️ Demo / Screenshots
+## Screenshots
 
-### Dashboard (Tenant View)
-<img width="1059" height="1439" alt="Screenshot 2026-03-17 183117" src="https://github.com/user-attachments/assets/7af59c91-a73b-41a2-bc6b-79d39c7b7566" />
+### Dashboard
+<img width="1059" height="1439" alt="Dashboard screenshot" src="https://github.com/user-attachments/assets/7af59c91-a73b-41a2-bc6b-79d39c7b7566" />
 
 ### Invitation Flow
-<img width="1879" height="1311" alt="Screenshot 2026-03-17 202305" src="https://github.com/user-attachments/assets/8b0835e1-38ac-4ab1-89c1-47dc3c2d8110" />
+<img width="1879" height="1311" alt="Invitation flow screenshot" src="https://github.com/user-attachments/assets/8b0835e1-38ac-4ab1-89c1-47dc3c2d8110" />
 
 ### Database / Tenant Isolation
-<img width="2879" height="1799" alt="Screenshot 2026-03-10 150140" src="https://github.com/user-attachments/assets/eace2fc7-60bb-4b76-a6dc-7746da8e5837" />
+<img width="2879" height="1799" alt="Database isolation screenshot" src="https://github.com/user-attachments/assets/eace2fc7-60bb-4b76-a6dc-7746da8e5837" />
 
----
+## Tech Stack
 
-## ⚙️ Tech Stack
+- Frontend: Next.js
+- Backend: Node.js, Express
+- Database: PostgreSQL
+- Local infrastructure: Docker Compose
+- Auth: JWT
+- Validation: Zod
+- Query builder: Knex
 
-- **Frontend:** Next.js  
-- **Backend:** Node.js, Express  
-- **Database:** PostgreSQL (Docker)  
-- **Auth:** JWT + middleware  
-- **Validation:** Zod  
+## Core Features
 
----
+- Tenant-scoped queries to prevent cross-tenant access
+- Role-based permissions for `owner`, `admin`, and `member`
+- Invitation acceptance flow for new users
+- `/auth/me` endpoint for server-verified session state
+- Member management for adding, updating, and removing users
+- Support for users belonging to multiple tenants with different roles
 
-## 🚀 Key Features
+## Architecture Note
 
-- Multi-tenant architecture (shared DB, shared schema)  
-- Role-based access (owner / admin / member)  
-- Tenant-scoped queries (strict isolation)  
-- `/auth/me` for session truth (not trusting JWT alone)  
-- Invitation-based onboarding  
-- Member management (add, update role, remove)  
-- Membership-based RBAC (user can belong to multiple tenants with different roles)
-  
----
+Tenant isolation is enforced in backend queries, not delegated to the client. A representative pattern in the API looks like:
 
-## 🔄 Example Flow
+```js
+.where({ tenant_id: req.user.tenantId })
+```
 
-Owner invites → user accepts → account created → membership assigned → user lands in tenant dashboard
+That means the backend remains the source of truth for data access even if the frontend is bypassed or modified.
 
----
+## Project Status
 
-## 🧠 Key Insight
-
-Tenant isolation is enforced at the query level:
-
-`.where({ tenant_id: req.user.tenantId })`
-This prevents cross-tenant data access regardless of frontend behavior.
-
-## Why this is better
-
-- keeps **code clearly separated**
-- makes explanation **scannable**
-- looks like real engineering docs (not a paragraph dump)
-- highlights **impact, not just description**
-
----
-
-## Current State
-- Fully working locally
+- Working locally
 - Backend architecture is stable
-- Frontend is functional but minimal
+- Frontend is functional but still minimal
 - Not yet deployed
+- Not yet production hardened
 
----
+## Run Locally
 
-# Next Steps
-- Project update/delete with permissions
-- Improved frontend validation (field-level errors)
-- Invite resend / regenerate
-- Integration tests (auth, RBAC, tenant isolation)
-- Production-ready config and deployment (AWS)
+1. Copy `.env.example` to `.env` and replace placeholder values.
+2. Start PostgreSQL:
 
----
+```bash
+docker compose up -d
+```
 
-# Run Locally
-1. Copy `.env.example` to `.env` and replace the placeholder values.
-2. Start PostgreSQL with `docker compose up -d`.
-3. Install dependencies in both apps:
-   `cd backend && npm install`
-   `cd frontend && npm install`
-4. Run migrations:
-   `cd backend && npm run migrate`
-5. Start the backend and frontend dev servers:
-   `cd backend && npm run dev`
-   `cd frontend && npm run dev`
+3. Install dependencies:
+
+```bash
+cd backend
+npm install
+cd ../frontend
+npm install
+```
+
+4. Run database migrations:
+
+```bash
+cd backend
+npm run migrate
+```
+
+5. Start the development servers:
+
+```bash
+cd backend
+npm run dev
+```
+
+```bash
+cd frontend
+npm run dev
+```
+
+## Environment Variables
+
+The repo includes a tracked example file at `.env.example`. Real secrets must stay in an untracked `.env` file.
+
+Required values:
+
+- `SERVER_PORT`
+- `NEXT_PUBLIC_API_URL`
+- `FRONTEND_URL`
+- `CORS_ORIGIN`
+- `DB_HOST`
+- `DB_PORT`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_DB`
+- `JWT_SECRET`
 
 ## Security Notes
-- The public repo is safe to share only if `.env` stays untracked.
-- `JWT_SECRET`, `POSTGRES_PASSWORD`, and other runtime secrets must come from `.env`.
-- This project is still development-oriented and not production-hardened yet.
 
-# Notes
-Full development log and architecture decisions are available in /docs.
+- `.env` is intentionally ignored and should never be committed.
+- Placeholder values in `.env.example` are safe to publish.
+- This repository is meant for learning and portfolio use, not direct production deployment without further hardening.
+
+## Next Steps
+
+- Add integration tests for auth, RBAC, and tenant isolation
+- Improve frontend validation and error states
+- Add invite resend and token regeneration flows
+- Add project update and delete permissions
+- Prepare a production deployment path
+
+## Notes
+
+Architecture notes and development details live in `/docs` when present.

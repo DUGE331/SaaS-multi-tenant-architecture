@@ -3,6 +3,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+.codex-logs/
 dist/
 build/
 .DS_Store
