@@ -8,7 +8,9 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "migrate": "knex migrate:latest --knexfile knexfile.js",
-    "migrate:make": "knex migrate:make"
+    "migrate:make": "knex migrate:make",
+    "test:setup": "node tests/setupTestDb.js",
+    "test": "node tests/runIntegrationTests.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

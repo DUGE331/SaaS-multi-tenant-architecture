@@ -6,6 +6,7 @@ import {
     clearToken,
     createInvitationRequest,
     createProjectRequest,
+    deleteProjectRequest,
     deleteMemberRequest,
     deleteInvitationRequest,
     getToken,
@@ -13,6 +14,7 @@ import {
     membersRequest,
     meRequest,
     projectsRequest,
+    updateProjectRequest,
     updateMemberRoleRequest,
 } from '../utils/api';
 import { hasFieldErrors, validateInvitationForm, validateProjectForm } from '../utils/validation';
@@ -124,11 +126,14 @@ export default function HomePage() {
     const [projectsError, setProjectsError] = useState('');
     const [membersError, setMembersError] = useState('');
     const [createError, setCreateError] = useState('');
+    const [projectActionError, setProjectActionError] = useState('');
     const [invitationError, setInvitationError] = useState('');
     const [projectFieldErrors, setProjectFieldErrors] = useState({});
+    const [projectEditFieldErrors, setProjectEditFieldErrors] = useState({});
     const [invitationFieldErrors, setInvitationFieldErrors] = useState({});
     const [invitationsError, setInvitationsError] = useState('');
     const [isCreating, setIsCreating] = useState(false);
+    const [projectActionLoadingId, setProjectActionLoadingId] = useState('');
     const [isCreatingInvitation, setIsCreatingInvitation] = useState(false);
     const [invitationActionError, setInvitationActionError] = useState('');
     const [invitationActionLoadingId, setInvitationActionLoadingId] = useState('');
@@ -139,6 +144,11 @@ export default function HomePage() {
         name: '',
         description: '',
     });
+    const [projectEditForm, setProjectEditForm] = useState({
+        name: '',
+        description: '',
+    });
+    const [editingProjectId, setEditingProjectId] = useState('');
     const [invitationForm, setInvitationForm] = useState({
         fullName: '',
         email: '',
@@ -249,6 +259,44 @@ export default function HomePage() {
         }));
     }
 
+    function handleProjectEditFieldChange(event) {
+        const { name, value } = event.target;
+        setProjectActionError('');
+        setProjectEditFieldErrors((current) => {
+            if (!current[name]) {
+                return current;
+            }
+
+            const nextErrors = { ...current };
+            delete nextErrors[name];
+            return nextErrors;
+        });
+        setProjectEditForm((current) => ({
+            ...current,
+            [name]: value,
+        }));
+    }
+
+    function handleStartProjectEdit(project) {
+        setProjectActionError('');
+        setProjectEditFieldErrors({});
+        setEditingProjectId(project.id);
+        setProjectEditForm({
+            name: project.name,
+            description: project.description || '',
+        });
+    }
+
+    function handleCancelProjectEdit() {
+        setEditingProjectId('');
+        setProjectEditFieldErrors({});
+        setProjectActionError('');
+        setProjectEditForm({
+            name: '',
+            description: '',
+        });
+    }
+
     async function handleCreateProject(event) {
         event.preventDefault();
         const nextFieldErrors = validateProjectForm(projectForm);
@@ -282,6 +330,63 @@ export default function HomePage() {
             }
         } finally {
             setIsCreating(false);
+        }
+    }
+
+    async function handleUpdateProject(projectId) {
+        const nextFieldErrors = validateProjectForm(projectEditForm);
+
+        setProjectActionError('');
+        setProjectEditFieldErrors(nextFieldErrors);
+
+        if (hasFieldErrors(nextFieldErrors)) {
+            return;
+        }
+
+        setProjectActionLoadingId(projectId);
+
+        try {
+            const updatedProject = await updateProjectRequest(projectId, {
+                name: projectEditForm.name,
+                description: projectEditForm.description,
+            });
+
+            setProjects((current) =>
+                current.map((project) => (project.id === projectId ? updatedProject : project))
+            );
+            handleCancelProjectEdit();
+        } catch (requestError) {
+            if (hasFieldErrors(requestError.fieldErrors || {})) {
+                setProjectEditFieldErrors(requestError.fieldErrors);
+            } else {
+                setProjectActionError(requestError.message || 'Unable to update project');
+            }
+        } finally {
+            setProjectActionLoadingId('');
+        }
+    }
+
+    async function handleDeleteProject(projectId) {
+        const confirmed = window.confirm('Delete this project? This action cannot be undone.');
+
+        if (!confirmed) {
+            return;
+        }
+
+        setProjectActionError('');
+        setProjectActionLoadingId(projectId);
+
+        try {
+            await deleteProjectRequest(projectId);
+            setProjects((current) => current.filter((project) => project.id !== projectId));
+
+            if (editingProjectId === projectId) {
+                handleCancelProjectEdit();
+            }
+        } catch (requestError) {
+            setProjectActionError(requestError.message || 'Unable to delete project');
+        } finally {
+            setProjectActionLoadingId('');
         }
     }
 
@@ -1123,6 +1228,21 @@ export default function HomePage() {
                         </div>
                     ) : null}
 
+                    {projectActionError ? (
+                        <div
+                            style={{
+                                marginBottom: '18px',
+                                padding: '14px 16px',
+                                borderRadius: '14px',
+                                backgroundColor: '#fef2f2',
+                                color: '#b91c1c',
+                                border: '1px solid #fecaca',
+                            }}
+                        >
+                            {projectActionError}
+                        </div>
+                    ) : null}
+
                     {!projects.length ? (
                         <div
                             style={{
@@ -1159,10 +1279,60 @@ export default function HomePage() {
                                         }}
                                     >
                                         <div>
-                                            <h3 style={{ margin: '0 0 8px', fontSize: '20px' }}>{project.name}</h3>
-                                            <p style={{ margin: 0, color: '#52606d', lineHeight: 1.7 }}>
-                                                {project.description || 'No description provided.'}
-                                            </p>
+                                            {editingProjectId === project.id ? (
+                                                <div style={{ minWidth: '280px' }}>
+                                                    <div style={{ marginBottom: '14px' }}>
+                                                        <label htmlFor={`project-name-${project.id}`} style={labelStyles}>
+                                                            Project Name
+                                                        </label>
+                                                        <input
+                                                            id={`project-name-${project.id}`}
+                                                            name="name"
+                                                            type="text"
+                                                            value={projectEditForm.name}
+                                                            onChange={handleProjectEditFieldChange}
+                                                            style={{
+                                                                ...inputStyles,
+                                                                borderColor: projectEditFieldErrors.name ? '#dc2626' : inputStyles.border,
+                                                            }}
+                                                            disabled={projectActionLoadingId === project.id}
+                                                        />
+                                                        {projectEditFieldErrors.name ? (
+                                                            <p style={fieldErrorTextStyles}>{projectEditFieldErrors.name}</p>
+                                                        ) : null}
+                                                    </div>
+
+                                                    <div>
+                                                        <label htmlFor={`project-description-${project.id}`} style={labelStyles}>
+                                                            Description
+                                                        </label>
+                                                        <textarea
+                                                            id={`project-description-${project.id}`}
+                                                            name="description"
+                                                            value={projectEditForm.description}
+                                                            onChange={handleProjectEditFieldChange}
+                                                            style={{
+                                                                ...inputStyles,
+                                                                borderColor: projectEditFieldErrors.description ? '#dc2626' : inputStyles.border,
+                                                                minHeight: '110px',
+                                                                resize: 'vertical',
+                                                                fontFamily: 'inherit',
+                                                            }}
+                                                            disabled={projectActionLoadingId === project.id}
+                                                        />
+                                                        <p style={projectEditFieldErrors.description ? fieldErrorTextStyles : helperTextStyles}>
+                                                            {projectEditFieldErrors.description || 'Optional. Keep it concise so the list stays readable.'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <h3 style={{ margin: '0 0 8px', fontSize: '20px' }}>{project.name}</h3>
+                                                    <p style={{ margin: 0, color: '#52606d', lineHeight: 1.7 }}>
+                                                        {project.description || 'No description provided.'}
+                                                    </p>
+                                                </>
+                                            )}
                                         </div>
 
                                         <div
@@ -1192,7 +1362,68 @@ export default function HomePage() {
                                     >
                                         <span>Project ID: {project.id}</span>
                                         <span>Created: {new Date(project.created_at).toLocaleString()}</span>
+                                        <span>Updated: {new Date(project.updated_at).toLocaleString()}</span>
                                     </div>
+
+                                    {canCreateProjects ? (
+                                        <div
+                                            style={{
+                                                marginTop: '16px',
+                                                display: 'flex',
+                                                gap: '12px',
+                                                flexWrap: 'wrap',
+                                                alignItems: 'center',
+                                            }}
+                                        >
+                                            {editingProjectId === project.id ? (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleUpdateProject(project.id)}
+                                                        disabled={projectActionLoadingId === project.id}
+                                                        style={buttonStyles}
+                                                    >
+                                                        {projectActionLoadingId === project.id ? 'Saving...' : 'Save Changes'}
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCancelProjectEdit}
+                                                        disabled={projectActionLoadingId === project.id}
+                                                        style={{
+                                                            ...buttonStyles,
+                                                            backgroundColor: '#475569',
+                                                        }}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleStartProjectEdit(project)}
+                                                        disabled={Boolean(editingProjectId) || projectActionLoadingId === project.id}
+                                                        style={buttonStyles}
+                                                    >
+                                                        Edit Project
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteProject(project.id)}
+                                                        disabled={Boolean(editingProjectId) || projectActionLoadingId === project.id}
+                                                        style={{
+                                                            ...buttonStyles,
+                                                            backgroundColor: '#b91c1c',
+                                                        }}
+                                                    >
+                                                        {projectActionLoadingId === project.id ? 'Working...' : 'Delete Project'}
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    ) : null}
                                 </article>
                             ))}
                         </div>

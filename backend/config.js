@@ -21,6 +21,7 @@ function requireEnv(name) {
 
 const defaultCorsOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000'];
 const configuredCorsOrigins = parseList(process.env.CORS_ORIGIN);
+const isTest = process.env.NODE_ENV === 'test';
 
 const config = {
   serverPort: Number(process.env.SERVER_PORT || 5000),
@@ -31,7 +32,7 @@ const config = {
     port: Number(process.env.DB_PORT || 5432),
     user: requireEnv('POSTGRES_USER'),
     password: requireEnv('POSTGRES_PASSWORD'),
-    database: requireEnv('POSTGRES_DB'),
+    database: isTest ? process.env.TEST_POSTGRES_DB || 'saas_test' : requireEnv('POSTGRES_DB'),
   },
   jwtSecret: requireEnv('JWT_SECRET'),
 };

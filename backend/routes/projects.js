@@ -4,7 +4,7 @@ const requireAuth = require('../middleware/requireAuth');
 const requireRole = require('../middleware/requireRole');
 const validate = require('../middleware/validate');
 const db = require('../db');
-const { createProjectSchema } = require('../validation/projectSchemas');
+const { createProjectSchema, updateProjectSchema } = require('../validation/projectSchemas');
 
 const router = express.Router();
 
@@ -41,6 +41,72 @@ router.post('/', requireRole(['owner', 'admin']), validate(createProjectSchema),
       return res.status(409).json({ error: 'A project with that name already exists for this tenant' });
     }
 
+    return next(error);
+  }
+});
+
+router.patch('/:projectId', requireRole(['owner', 'admin']), validate(updateProjectSchema), async (req, res, next) => {
+  const { projectId } = req.params;
+  const { name, description } = req.body;
+
+  try {
+    const existingProject = await db('projects')
+      .where({
+        id: projectId,
+        tenant_id: req.user.tenantId,
+      })
+      .first();
+
+    if (!existingProject) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    const [project] = await db('projects')
+      .where({
+        id: projectId,
+        tenant_id: req.user.tenantId,
+      })
+      .update({
+        name,
+        description: description || null,
+        updated_at: db.fn.now(),
+      })
+      .returning(['id', 'tenant_id', 'name', 'description', 'status', 'created_at', 'updated_at']);
+
+    return res.json(project);
+  } catch (error) {
+    if (error.code === '23505') {
+      return res.status(409).json({ error: 'A project with that name already exists for this tenant' });
+    }
+
+    return next(error);
+  }
+});
+
+router.delete('/:projectId', requireRole(['owner', 'admin']), async (req, res, next) => {
+  const { projectId } = req.params; //get projects from URL parameters (e.g., /projects/123 would have projectId of 123)
+
+  try {
+    const project = await db('projects')
+      .where({
+        id: projectId,
+        tenant_id: req.user.tenantId,
+      })
+      .first();
+
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    await db('projects')
+      .where({
+        id: projectId,
+        tenant_id: req.user.tenantId,
+      })
+      .del();
+
+    return res.status(204).send();
+  } catch (error) {
     return next(error);
   }
 });

@@ -98,6 +98,19 @@ export function createProjectRequest(payload) {
     });
 }
 
+export function updateProjectRequest(projectId, payload) {
+    return apiRequest(`/projects/${projectId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+    });
+}
+
+export function deleteProjectRequest(projectId) {
+    return apiRequest(`/projects/${projectId}`, {
+        method: 'DELETE',
+    });
+}
+
 export function membersRequest() {
     return apiRequest('/memberships');
 }
