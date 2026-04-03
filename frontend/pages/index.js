@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 
+import { AppShell } from '../components/layout/app-shell';
+import { Alert } from '../components/ui/alert';
+import { Button } from '../components/ui/button';
 import {
     clearToken,
     createInvitationRequest,
@@ -117,6 +120,46 @@ const secondaryLinkStyles = {
     fontWeight: 700,
 };
 
+const pillBadgeStyles = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '5px 12px',
+    borderRadius: '999px',
+    fontSize: '12px',
+    fontWeight: 700,
+    lineHeight: 1,
+    textTransform: 'uppercase',
+    whiteSpace: 'nowrap',
+};
+
+const memberRoleBadgeStyles = {
+    ...pillBadgeStyles,
+    height: 'fit-content',
+    alignSelf: 'flex-start',
+    padding: '3px 12px',
+};
+
+function formatRole(role) {
+    if (!role) {
+        return '';
+    }
+
+    return `${role.charAt(0).toUpperCase()}${role.slice(1)}`;
+}
+
+function formatShortDate(value) {
+    if (!value) {
+        return '';
+    }
+
+    return new Date(value).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    });
+}
+
 export default function HomePage() {
     const router = useRouter();
     const [session, setSession] = useState(null);
@@ -230,6 +273,7 @@ export default function HomePage() {
     const canCreateProjects = session?.role === 'owner' || session?.role === 'admin';
     const canManageMembers = session?.role === 'owner' || session?.role === 'admin';
     const isOwner = session?.role === 'owner';
+    const roleLabel = formatRole(session?.role);
     const visibleInvitations = invitations.filter((invitation) => {
         const isAccepted = Boolean(invitation.accepted_at);
         const isExpired = !isAccepted && new Date(invitation.expires_at) < new Date();
@@ -492,110 +536,50 @@ export default function HomePage() {
 
     if (isLoading) {
         return (
-            <main style={pageStyles}>
-                <div style={shellStyles}>
-                    <section style={panelStyles}>
-                        <p style={{ margin: 0, fontSize: '16px', color: '#52606d' }}>Restoring your workspace session...</p>
-                    </section>
+            <AppShell
+                currentNav="dashboard"
+                description="Loading workspace"
+                title="Restoring session"
+            >
+                <div className="surface-card p-5">
+                    <div className="space-y-3">
+                        <div className="h-4 w-36 animate-pulse rounded bg-subtle" />
+                        <div className="h-10 w-full animate-pulse rounded-md bg-subtle" />
+                        <div className="h-10 w-full animate-pulse rounded-md bg-subtle" />
+                    </div>
                 </div>
-            </main>
+            </AppShell>
         );
     }
 
     if (!session) {
         return (
-            <main style={pageStyles}>
-                <div style={shellStyles}>
-                    <section style={panelStyles}>
-                        <h1 style={{ marginTop: 0 }}>Session unavailable</h1>
-                        <p style={{ color: '#52606d' }}>{error || 'Please sign in again to continue.'}</p>
-                        <Link href="/login" style={secondaryLinkStyles}>
-                            Go to Login
-                        </Link>
-                    </section>
+            <AppShell
+                currentNav="dashboard"
+                description="Your session could not be restored."
+                title="Session unavailable"
+            >
+                <div className="surface-card max-w-[720px] p-6">
+                    <div className="space-y-4">
+                        <Alert variant="error">{error || 'Please sign in again to continue.'}</Alert>
+                        <Button as={Link} href="/login" variant="secondary">
+                            Go to login
+                        </Button>
+                    </div>
                 </div>
-            </main>
+            </AppShell>
         );
     }
 
     return (
-        <main style={pageStyles}>
-            <div style={shellStyles}>
-                <section style={heroStyles}>
-                    <div>
-                        <p
-                            style={{
-                                margin: '0 0 10px',
-                                fontSize: '12px',
-                                fontWeight: 700,
-                                letterSpacing: '0.08em',
-                                textTransform: 'uppercase',
-                                color: '#124e66',
-                            }}
-                        >
-                            Workspace Overview
-                        </p>
-                        <h1 style={{ margin: 0, fontSize: '36px', lineHeight: 1.1 }}>
-                            Welcome back, {session.user.fullName}
-                        </h1>
-                        <p style={{ margin: '12px 0 0', maxWidth: '620px', color: '#52606d', lineHeight: 1.7 }}>
-                            Your session is active and scoped to the <strong>{session.tenant.name}</strong> tenant. This
-                            page is loaded from <code>/auth/me</code>, which means the frontend is using the same tenant
-                            context the backend enforces for protected resources.
-                        </p>
-                    </div>
-
-                    <button type="button" onClick={handleSignOut} style={buttonStyles}>
-                        Sign Out
-                    </button>
-                </section>
-
-                <section style={panelStyles}>
-                    <h2 style={{ marginTop: 0, marginBottom: '18px', fontSize: '22px' }}>Current Session</h2>
-
-                    <div style={statGridStyles}>
-                        <article style={statCardStyles}>
-                            <p style={{ margin: '0 0 8px', fontSize: '12px', textTransform: 'uppercase', color: '#52606d' }}>
-                                User
-                            </p>
-                            <h3 style={{ margin: '0 0 6px', fontSize: '20px' }}>{session.user.fullName}</h3>
-                            <p style={{ margin: 0, color: '#52606d' }}>{session.user.email}</p>
-                        </article>
-
-                        <article style={statCardStyles}>
-                            <p style={{ margin: '0 0 8px', fontSize: '12px', textTransform: 'uppercase', color: '#52606d' }}>
-                                Tenant
-                            </p>
-                            <h3 style={{ margin: '0 0 6px', fontSize: '20px' }}>{session.tenant.name}</h3>
-                            <p style={{ margin: 0, color: '#52606d' }}>Slug: {session.tenant.slug}</p>
-                        </article>
-
-                        <article style={statCardStyles}>
-                            <p style={{ margin: '0 0 8px', fontSize: '12px', textTransform: 'uppercase', color: '#52606d' }}>
-                                Role
-                            </p>
-                            <h3 style={{ margin: '0 0 6px', fontSize: '20px', textTransform: 'capitalize' }}>{session.role}</h3>
-                            <p style={{ margin: 0, color: '#52606d' }}>Tenant status: {session.tenant.status}</p>
-                        </article>
-                    </div>
-
-                    <div
-                        style={{
-                            marginTop: '24px',
-                            padding: '18px',
-                            borderRadius: '16px',
-                            backgroundColor: '#fff7ed',
-                            border: '1px solid #fed7aa',
-                        }}
-                    >
-                        <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.7, color: '#9a3412' }}>
-                            This workspace is already using the stored JWT to bootstrap session state and fetch tenant-scoped
-                            project data from the backend.
-                        </p>
-                    </div>
-                </section>
-
-                <section style={{ ...panelStyles, marginTop: '24px' }}>
+        <AppShell
+            currentNav="dashboard"
+            description={`${session.tenant.name} · ${roleLabel}`}
+            onSignOut={handleSignOut}
+            session={session}
+            title={`Welcome back, ${session.user.fullName}`}
+        >
+                <section id="members" style={{ ...panelStyles, marginTop: '24px' }}>
                     <div
                         style={{
                             display: 'flex',
@@ -607,27 +591,14 @@ export default function HomePage() {
                         }}
                     >
                         <div>
-                            <h2 style={{ margin: 0, fontSize: '22px' }}>Tenant Members</h2>
-                            <p style={{ margin: '8px 0 0', color: '#52606d' }}>
-                                Manage users inside the current tenant and assign their role.
-                            </p>
-                        </div>
-                        <div
-                            style={{
-                                padding: '10px 14px',
-                                borderRadius: '999px',
-                                backgroundColor: '#ecfeff',
-                                color: '#155e75',
-                                fontWeight: 700,
-                                fontSize: '13px',
-                            }}
-                        >
-                            {members.length} member{members.length === 1 ? '' : 's'}
+                            <h2 style={{ margin: 0, fontSize: '22px' }}>Members ({members.length})</h2>
+                            <p style={{ margin: '8px 0 0', color: '#52606d' }}>Manage team members and permissions</p>
                         </div>
                     </div>
 
                     {canManageMembers ? (
                         <div
+                            id="invitations"
                             style={{
                                 marginBottom: '24px',
                                 padding: '20px',
@@ -637,10 +608,8 @@ export default function HomePage() {
                             }}
                         >
                             <div style={{ marginBottom: '16px' }}>
-                            <h3 style={{ margin: '0 0 8px', fontSize: '20px' }}>Invite Member</h3>
-                            <p style={{ margin: 0, color: '#52606d', lineHeight: 1.7 }}>
-                                    Send an invitation link so the new user can set their own password and accept the role.
-                                </p>
+                                <h3 style={{ margin: '0 0 6px', fontSize: '20px' }}>Invite member</h3>
+                                <p style={{ margin: 0, color: '#52606d' }}>Send an invitation to join this workspace.</p>
                             </div>
 
                             {invitationError ? (
@@ -678,9 +647,7 @@ export default function HomePage() {
                                         />
                                         {invitationFieldErrors.fullName ? (
                                             <p style={fieldErrorTextStyles}>{invitationFieldErrors.fullName}</p>
-                                        ) : (
-                                            <p style={helperTextStyles}>Optional, but useful for a more personal invite.</p>
-                                        )}
+                                        ) : null}
                                     </div>
 
                                     <div>
@@ -730,7 +697,7 @@ export default function HomePage() {
 
                                 <div style={{ marginTop: '18px' }}>
                                     <button type="submit" style={buttonStyles} disabled={isCreatingInvitation}>
-                                        {isCreatingInvitation ? 'Creating Invitation...' : 'Send Invitation'}
+                                        {isCreatingInvitation ? 'Sending...' : 'Send invitation'}
                                     </button>
                                 </div>
                             </form>
@@ -747,8 +714,7 @@ export default function HomePage() {
                                 lineHeight: 1.7,
                             }}
                         >
-                            Your current role is <strong>{session.role}</strong>. Only tenant owners and admins can
-                            add or manage members.
+                            Only Owners and Admins can invite or manage members.
                         </div>
                     )}
 
@@ -785,6 +751,7 @@ export default function HomePage() {
                     ) : null}
 
                     <div
+                        id={canManageMembers ? 'invitations' : undefined}
                         style={{
                             marginBottom: '18px',
                             display: 'flex',
@@ -794,9 +761,7 @@ export default function HomePage() {
                             flexWrap: 'wrap',
                         }}
                     >
-                        <div style={{ color: '#52606d', fontSize: '14px' }}>
-                            {visibleInvitations.length} visible invitation{visibleInvitations.length === 1 ? '' : 's'}
-                        </div>
+                        <h3 style={{ margin: 0, fontSize: '20px' }}>Invitations ({visibleInvitations.length})</h3>
                         <button
                             type="button"
                             onClick={() => setShowClosedInvites((current) => !current)}
@@ -805,7 +770,7 @@ export default function HomePage() {
                                 backgroundColor: '#475569',
                             }}
                         >
-                            {showClosedInvites ? 'Hide Accepted And Expired' : 'Show Accepted And Expired'}
+                            {showClosedInvites ? 'Hide accepted and expired' : 'Show accepted and expired'}
                         </button>
                     </div>
 
@@ -839,19 +804,15 @@ export default function HomePage() {
                                                 <div>
                                                     <h3 style={{ margin: '0 0 8px', fontSize: '18px' }}>{invitation.email}</h3>
                                                     <p style={{ margin: 0, color: '#52606d' }}>
-                                                        {invitation.full_name || 'No name provided'} • {invitation.role}
+                                                        {invitation.full_name || 'No name provided'} - {formatRole(invitation.role)}
                                                     </p>
                                                 </div>
 
                                                 <div
                                                     style={{
-                                                        padding: '8px 12px',
-                                                        borderRadius: '999px',
+                                                        ...pillBadgeStyles,
                                                         backgroundColor: isAccepted ? '#dcfce7' : isExpired ? '#e2e8f0' : '#fff7ed',
                                                         color: isAccepted ? '#166534' : isExpired ? '#475569' : '#9a3412',
-                                                        fontSize: '12px',
-                                                        fontWeight: 700,
-                                                        textTransform: 'uppercase',
                                                     }}
                                                 >
                                                     {statusLabel}
@@ -859,7 +820,7 @@ export default function HomePage() {
                                             </div>
 
                                             <div style={{ marginTop: '12px', fontSize: '13px', color: '#52606d', lineHeight: 1.7 }}>
-                                                <div>Expires: {new Date(invitation.expires_at).toLocaleString()}</div>
+                                                <div>Expires {formatShortDate(invitation.expires_at)}</div>
                                                 {!isAccepted ? (
                                                     <div style={{ marginTop: '8px', wordBreak: 'break-all' }}>
                                                         Invite link: <a href={invitation.invitation_link}>{invitation.invitation_link}</a>
@@ -867,43 +828,44 @@ export default function HomePage() {
                                                 ) : null}
                                             </div>
 
-                                            <div
-                                                style={{
-                                                    marginTop: '16px',
-                                                    display: 'flex',
-                                                    gap: '12px',
-                                                    flexWrap: 'wrap',
-                                                    alignItems: 'center',
-                                                }}
-                                            >
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        if (typeof window !== 'undefined') {
-                                                            window.navigator.clipboard.writeText(invitation.invitation_link);
-                                                        }
-                                                    }}
+                                            {canRevoke ? (
+                                                <div
                                                     style={{
-                                                        ...buttonStyles,
-                                                        backgroundColor: '#155e75',
+                                                        marginTop: '16px',
+                                                        display: 'flex',
+                                                        gap: '12px',
+                                                        flexWrap: 'wrap',
+                                                        alignItems: 'center',
                                                     }}
-                                                    disabled={isAccepted}
                                                 >
-                                                    Copy Link
-                                                </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (typeof window !== 'undefined') {
+                                                                window.navigator.clipboard.writeText(invitation.invitation_link);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            ...buttonStyles,
+                                                            backgroundColor: '#155e75',
+                                                        }}
+                                                    >
+                                                        Copy Link
+                                                    </button>
 
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleRevokeInvitation(invitation.id)}
-                                                    disabled={!canRevoke || invitationActionLoadingId === invitation.id}
-                                                    style={{
-                                                        ...buttonStyles,
-                                                        backgroundColor: canRevoke ? '#b91c1c' : '#94a3b8',
-                                                    }}
-                                                >
-                                                    {invitationActionLoadingId === invitation.id ? 'Revoking...' : 'Revoke'}
-                                                </button>
-                                            </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRevokeInvitation(invitation.id)}
+                                                        disabled={invitationActionLoadingId === invitation.id}
+                                                        style={{
+                                                            ...buttonStyles,
+                                                            backgroundColor: '#b91c1c',
+                                                        }}
+                                                    >
+                                                        {invitationActionLoadingId === invitation.id ? 'Revoking...' : 'Revoke'}
+                                                    </button>
+                                                </div>
+                                            ) : null}
                                         </article>
                                     );
                                 })()
@@ -911,6 +873,7 @@ export default function HomePage() {
                         </div>
                     ) : (
                         <div
+                            id={canManageMembers ? undefined : 'invitations'}
                             style={{
                                 marginBottom: '24px',
                                 padding: '20px',
@@ -920,8 +883,7 @@ export default function HomePage() {
                             }}
                         >
                             <p style={{ margin: 0, fontSize: '15px', color: '#52606d', lineHeight: 1.7 }}>
-                                No active invitations are currently visible. You can still view accepted or expired
-                                items by toggling the invitation history.
+                                No pending invitations.
                             </p>
                         </div>
                     )}
@@ -968,7 +930,7 @@ export default function HomePage() {
                             }}
                         >
                             <p style={{ margin: 0, fontSize: '15px', color: '#52606d', lineHeight: 1.7 }}>
-                                No tenant members were returned. Once you add users, they will appear here with their role.
+                                No members yet.
                             </p>
                         </div>
                     ) : (
@@ -1000,36 +962,23 @@ export default function HomePage() {
                                         <div>
                                             <h3 style={{ margin: '0 0 8px', fontSize: '20px' }}>{member.full_name}</h3>
                                             <p style={{ margin: 0, color: '#52606d' }}>{member.email}</p>
+                                            <p style={{ margin: '10px 0 0', fontSize: '13px', color: '#52606d' }}>
+                                                {formatRole(member.role)} - {member.is_active ? 'Active' : 'Inactive'}
+                                            </p>
+                                            <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#64748b' }}>
+                                                Added {formatShortDate(member.created_at)}
+                                            </p>
                                         </div>
 
                                         <div
                                             style={{
-                                                padding: '8px 12px',
-                                                borderRadius: '999px',
+                                                ...memberRoleBadgeStyles,
                                                 backgroundColor: '#ede9fe',
                                                 color: '#6d28d9',
-                                                fontSize: '12px',
-                                                fontWeight: 700,
-                                                textTransform: 'uppercase',
                                             }}
                                         >
-                                            {member.role}
+                                            {formatRole(member.role)}
                                         </div>
-                                    </div>
-
-                                    <div
-                                        style={{
-                                            marginTop: '14px',
-                                            display: 'flex',
-                                            gap: '16px',
-                                            flexWrap: 'wrap',
-                                            fontSize: '13px',
-                                            color: '#52606d',
-                                        }}
-                                    >
-                                        <span>User ID: {member.user_id}</span>
-                                        <span>Status: {member.is_active ? 'Active' : 'Inactive'}</span>
-                                        <span>Added: {new Date(member.created_at).toLocaleString()}</span>
                                     </div>
 
                                     {canManageMembers ? (
@@ -1070,7 +1019,7 @@ export default function HomePage() {
                                                         canRemoveThisMember ? '#b91c1c' : '#94a3b8',
                                                 }}
                                             >
-                                                {memberActionLoadingId === member.id ? 'Working...' : 'Remove Member'}
+                                                {memberActionLoadingId === member.id ? 'Working...' : 'Remove'}
                                             </button>
                                         </div>
                                     ) : null}
@@ -1082,7 +1031,7 @@ export default function HomePage() {
                     )}
                 </section>
 
-                <section style={{ ...panelStyles, marginTop: '24px' }}>
+                <section id="projects" style={{ ...panelStyles, marginTop: '24px' }}>
                     <div
                         style={{
                             marginBottom: '24px',
@@ -1094,9 +1043,6 @@ export default function HomePage() {
                     >
                         <div style={{ marginBottom: '16px' }}>
                             <h2 style={{ margin: '0 0 8px', fontSize: '22px' }}>Create Project</h2>
-                            <p style={{ margin: 0, color: '#52606d', lineHeight: 1.7 }}>
-                                This action is limited to tenant roles with project management permission.
-                            </p>
                         </div>
 
                         {canCreateProjects ? (
@@ -1141,12 +1087,12 @@ export default function HomePage() {
 
                                     <div style={{ marginBottom: '18px' }}>
                                         <label htmlFor="description" style={labelStyles}>
-                                            Description
+                                            Brief description
                                         </label>
                                         <textarea
                                             id="description"
                                             name="description"
-                                            placeholder="Describe the goal of this tenant-scoped project"
+                                            placeholder="Add a short summary for the team"
                                             value={projectForm.description}
                                             onChange={handleProjectFieldChange}
                                             style={{
@@ -1157,9 +1103,9 @@ export default function HomePage() {
                                                 fontFamily: 'inherit',
                                             }}
                                         />
-                                        <p style={projectFieldErrors.description ? fieldErrorTextStyles : helperTextStyles}>
-                                            {projectFieldErrors.description || 'Optional. Keep it concise so the list stays readable.'}
-                                        </p>
+                                        {projectFieldErrors.description ? (
+                                            <p style={fieldErrorTextStyles}>{projectFieldErrors.description}</p>
+                                        ) : null}
                                     </div>
 
                                     <button type="submit" style={buttonStyles} disabled={isCreating}>
@@ -1178,8 +1124,7 @@ export default function HomePage() {
                                     lineHeight: 1.7,
                                 }}
                             >
-                                Your current role is <strong>{session.role}</strong>. Members can view projects, but only
-                                <strong> owner</strong> and <strong>admin</strong> roles can create them.
+                                Only Owners and Admins can create projects.
                             </div>
                         )}
                     </div>
@@ -1195,22 +1140,7 @@ export default function HomePage() {
                         }}
                     >
                         <div>
-                            <h2 style={{ margin: 0, fontSize: '22px' }}>Projects</h2>
-                            <p style={{ margin: '8px 0 0', color: '#52606d' }}>
-                                These records are loaded from <code>/projects</code> and scoped to the current tenant.
-                            </p>
-                        </div>
-                        <div
-                            style={{
-                                padding: '10px 14px',
-                                borderRadius: '999px',
-                                backgroundColor: '#ecfeff',
-                                color: '#155e75',
-                                fontWeight: 700,
-                                fontSize: '13px',
-                            }}
-                        >
-                            {projects.length} project{projects.length === 1 ? '' : 's'}
+                            <h2 style={{ margin: 0, fontSize: '22px' }}>Projects ({projects.length})</h2>
                         </div>
                     </div>
 
@@ -1253,8 +1183,7 @@ export default function HomePage() {
                             }}
                         >
                             <p style={{ margin: 0, fontSize: '15px', color: '#52606d', lineHeight: 1.7 }}>
-                                No projects exist for this tenant yet. The empty state is also tenant-aware, so another tenant
-                                would see only its own project list.
+                                No projects yet.
                             </p>
                         </div>
                     ) : (
@@ -1304,7 +1233,7 @@ export default function HomePage() {
 
                                                     <div>
                                                         <label htmlFor={`project-description-${project.id}`} style={labelStyles}>
-                                                            Description
+                                                            Brief description
                                                         </label>
                                                         <textarea
                                                             id={`project-description-${project.id}`}
@@ -1320,9 +1249,9 @@ export default function HomePage() {
                                                             }}
                                                             disabled={projectActionLoadingId === project.id}
                                                         />
-                                                        <p style={projectEditFieldErrors.description ? fieldErrorTextStyles : helperTextStyles}>
-                                                            {projectEditFieldErrors.description || 'Optional. Keep it concise so the list stays readable.'}
-                                                        </p>
+                                                        {projectEditFieldErrors.description ? (
+                                                            <p style={fieldErrorTextStyles}>{projectEditFieldErrors.description}</p>
+                                                        ) : null}
                                                     </div>
                                                 </div>
                                             ) : (
@@ -1337,16 +1266,12 @@ export default function HomePage() {
 
                                         <div
                                             style={{
-                                                padding: '8px 12px',
-                                                borderRadius: '999px',
+                                                ...pillBadgeStyles,
                                                 backgroundColor: '#dcfce7',
                                                 color: '#166534',
-                                                fontSize: '12px',
-                                                fontWeight: 700,
-                                                textTransform: 'uppercase',
                                             }}
                                         >
-                                            {project.status}
+                                            {formatRole(project.status)}
                                         </div>
                                     </div>
 
@@ -1360,9 +1285,7 @@ export default function HomePage() {
                                             color: '#52606d',
                                         }}
                                     >
-                                        <span>Project ID: {project.id}</span>
-                                        <span>Created: {new Date(project.created_at).toLocaleString()}</span>
-                                        <span>Updated: {new Date(project.updated_at).toLocaleString()}</span>
+                                        <span>Active - Updated {formatShortDate(project.updated_at)}</span>
                                     </div>
 
                                     {canCreateProjects ? (
@@ -1383,7 +1306,7 @@ export default function HomePage() {
                                                         disabled={projectActionLoadingId === project.id}
                                                         style={buttonStyles}
                                                     >
-                                                        {projectActionLoadingId === project.id ? 'Saving...' : 'Save Changes'}
+                                                        {projectActionLoadingId === project.id ? 'Saving...' : 'Save'}
                                                     </button>
 
                                                     <button
@@ -1406,7 +1329,7 @@ export default function HomePage() {
                                                         disabled={Boolean(editingProjectId) || projectActionLoadingId === project.id}
                                                         style={buttonStyles}
                                                     >
-                                                        Edit Project
+                                                        Edit
                                                     </button>
 
                                                     <button
@@ -1418,7 +1341,7 @@ export default function HomePage() {
                                                             backgroundColor: '#b91c1c',
                                                         }}
                                                     >
-                                                        {projectActionLoadingId === project.id ? 'Working...' : 'Delete Project'}
+                                                        {projectActionLoadingId === project.id ? 'Working...' : 'Delete'}
                                                     </button>
                                                 </>
                                             )}
@@ -1429,7 +1352,6 @@ export default function HomePage() {
                         </div>
                     )}
                 </section>
-            </div>
-        </main>
+        </AppShell>
     );
 }

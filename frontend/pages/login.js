@@ -2,6 +2,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
 
+import { AuthShell } from '../components/layout/auth-shell';
+import { Alert } from '../components/ui/alert';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { branding } from '../config/branding';
 import { loginRequest, setToken } from '../utils/api';
 import { hasFieldErrors, validateLoginForm } from '../utils/validation';
 
@@ -9,79 +14,6 @@ const initialForm = {
   tenantSlug: '',
   email: '',
   password: '',
-};
-
-const pageStyles = {
-  minHeight: '100vh',
-  display: 'grid',
-  placeItems: 'center',
-  padding: '32px 16px',
-  background:
-    'linear-gradient(135deg, rgba(250,248,242,1) 0%, rgba(230,238,243,1) 50%, rgba(242,245,235,1) 100%)',
-  color: '#14213d',
-  fontFamily: '"Segoe UI", sans-serif',
-};
-
-const cardStyles = {
-  width: '100%',
-  maxWidth: '460px',
-  padding: '32px',
-  borderRadius: '20px',
-  backgroundColor: 'rgba(255, 255, 255, 0.94)',
-  boxShadow: '0 24px 60px rgba(20, 33, 61, 0.12)',
-  border: '1px solid rgba(20, 33, 61, 0.08)',
-};
-
-const labelStyles = {
-  display: 'block',
-  marginBottom: '8px',
-  fontSize: '14px',
-  fontWeight: 600,
-  color: '#243b53',
-};
-
-const inputStyles = {
-  width: '100%',
-  padding: '14px 16px',
-  borderRadius: '12px',
-  border: '1px solid #cbd5e1',
-  fontSize: '15px',
-  outline: 'none',
-  backgroundColor: '#fff',
-};
-
-const helperTextStyles = {
-  marginTop: '6px',
-  fontSize: '12px',
-  color: '#52606d',
-};
-
-const fieldErrorTextStyles = {
-  marginTop: '6px',
-  fontSize: '12px',
-  color: '#b91c1c',
-};
-
-const buttonStyles = {
-  width: '100%',
-  padding: '14px 16px',
-  border: 'none',
-  borderRadius: '12px',
-  backgroundColor: '#0f766e',
-  color: '#fff',
-  fontSize: '15px',
-  fontWeight: 700,
-  cursor: 'pointer',
-};
-
-const errorStyles = {
-  marginBottom: '16px',
-  padding: '12px 14px',
-  borderRadius: '12px',
-  backgroundColor: '#fef2f2',
-  color: '#b91c1c',
-  fontSize: '14px',
-  border: '1px solid #fecaca',
 };
 
 export default function LoginPage() {
@@ -93,6 +25,7 @@ export default function LoginPage() {
 
   function handleChange(event) {
     const { name, value } = event.target;
+
     setError('');
     setFieldErrors((current) => {
       if (!current[name]) {
@@ -103,6 +36,7 @@ export default function LoginPage() {
       delete nextErrors[name];
       return nextErrors;
     });
+
     setForm((current) => ({
       ...current,
       [name]: value,
@@ -143,117 +77,81 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={pageStyles}>
-      <section style={cardStyles}>
-        <div style={{ marginBottom: '28px' }}>
-          <p
-            style={{
-              margin: '0 0 12px',
-              fontSize: '12px',
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: '#0f766e',
-            }}
-          >
-            Multi-Tenant SaaS
-          </p>
-          <h1 style={{ margin: 0, fontSize: '32px', lineHeight: 1.1 }}>Sign in to your workspace</h1>
-          <p style={{ margin: '12px 0 0', fontSize: '15px', lineHeight: 1.6, color: '#52606d' }}>
-            Enter your tenant slug, email address, and password to access the correct organization.
-          </p>
+    <AuthShell
+      eyebrow={branding.appName}
+      footer={
+        <div className="flex items-center justify-between gap-3 text-[13px] text-muted-foreground">
+          <span>Need an account?</span>
+          <Button as={Link} href="/register" size="sm" variant="ghost">
+            Register workspace
+          </Button>
         </div>
+      }
+      hideAside
+      title="Sign in"
+    >
+      <div className="space-y-6">
+        {error ? <Alert variant="error">{error}</Alert> : null}
 
-        {error ? <div style={errorStyles}>{error}</div> : null}
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '18px' }}>
-            <label htmlFor="tenantSlug" style={labelStyles}>
-              Tenant Slug
+        <form className="space-y-5" onSubmit={handleSubmit}>
+          <div>
+            <label className="field-label" htmlFor="tenantSlug">
+              Tenant slug
             </label>
-            <input
+            <Input
+              autoComplete="organization"
+              hasError={Boolean(fieldErrors.tenantSlug)}
               id="tenantSlug"
               name="tenantSlug"
-              type="text"
-              autoComplete="organization"
-              placeholder="acme"
-              value={form.tenantSlug}
               onChange={handleChange}
-              style={{
-                ...inputStyles,
-                borderColor: fieldErrors.tenantSlug ? '#dc2626' : inputStyles.border,
-              }}
+              placeholder="acme"
               required
+              value={form.tenantSlug}
             />
-            <p style={fieldErrors.tenantSlug ? fieldErrorTextStyles : helperTextStyles}>
-              {fieldErrors.tenantSlug || 'Use the unique workspace slug created during registration.'}
-            </p>
+            {fieldErrors.tenantSlug ? <p className="field-error">{fieldErrors.tenantSlug}</p> : null}
           </div>
 
-          <div style={{ marginBottom: '18px' }}>
-            <label htmlFor="email" style={labelStyles}>
-              Work Email
+          <div>
+            <label className="field-label" htmlFor="email">
+              Email
             </label>
-            <input
+            <Input
+              autoComplete="email"
+              hasError={Boolean(fieldErrors.email)}
               id="email"
               name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="john@acme.com"
-              value={form.email}
               onChange={handleChange}
-              style={{
-                ...inputStyles,
-                borderColor: fieldErrors.email ? '#dc2626' : inputStyles.border,
-              }}
+              placeholder="john@acme.com"
               required
+              type="email"
+              value={form.email}
             />
-            {fieldErrors.email ? <p style={fieldErrorTextStyles}>{fieldErrors.email}</p> : null}
+            {fieldErrors.email ? <p className="field-error">{fieldErrors.email}</p> : null}
           </div>
 
-          <div style={{ marginBottom: '24px' }}>
-            <label htmlFor="password" style={labelStyles}>
+          <div>
+            <label className="field-label" htmlFor="password">
               Password
             </label>
-            <input
+            <Input
+              autoComplete="current-password"
+              hasError={Boolean(fieldErrors.password)}
               id="password"
               name="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="Enter your password"
-              value={form.password}
               onChange={handleChange}
-              style={{
-                ...inputStyles,
-                borderColor: fieldErrors.password ? '#dc2626' : inputStyles.border,
-              }}
+              placeholder="Enter your password"
               required
+              type="password"
+              value={form.password}
             />
-            {fieldErrors.password ? <p style={fieldErrorTextStyles}>{fieldErrors.password}</p> : null}
+            {fieldErrors.password ? <p className="field-error">{fieldErrors.password}</p> : null}
           </div>
 
-          <button type="submit" style={buttonStyles} disabled={isSubmitting}>
-            {isSubmitting ? 'Signing In...' : 'Sign In'}
-          </button>
+          <Button className="w-full" disabled={isSubmitting} type="submit">
+            {isSubmitting ? 'Signing in...' : 'Sign in'}
+          </Button>
         </form>
-
-        <div
-          style={{
-            marginTop: '20px',
-            fontSize: '14px',
-            color: '#52606d',
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: '12px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <span>Need an account for a new tenant?</span>
-          <Link href="/register" style={{ color: '#0f766e', fontWeight: 700, textDecoration: 'none' }}>
-            Register workspace
-          </Link>
-        </div>
-      </section>
-    </main>
+      </div>
+    </AuthShell>
   );
 }
