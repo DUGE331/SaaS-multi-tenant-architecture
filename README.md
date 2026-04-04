@@ -13,10 +13,11 @@ A full-stack multi-tenant SaaS example built with Node.js, Express, PostgreSQL, 
 ## Screenshots
 
 ### Dashboard
-<img width="1059" height="1439" alt="Dashboard screenshot" src="https://github.com/user-attachments/assets/7af59c91-a73b-41a2-bc6b-79d39c7b7566" />
+<img width="2879" height="1632" alt="Screenshot 2026-04-03 202505" src="https://github.com/user-attachments/assets/c2852273-bb1a-496b-9115-8aa890d4e0ee" />
 
-### Invitation Flow
-<img width="1879" height="1311" alt="Invitation flow screenshot" src="https://github.com/user-attachments/assets/8b0835e1-38ac-4ab1-89c1-47dc3c2d8110" />
+### Register
+<img width="2863" height="1712" alt="Screenshot 2026-04-03 202304" src="https://github.com/user-attachments/assets/696ce650-d354-4470-b946-0cb2fa07d317" />
+
 
 ### Database / Tenant Isolation
 <img width="2879" height="1799" alt="Database isolation screenshot" src="https://github.com/user-attachments/assets/eace2fc7-60bb-4b76-a6dc-7746da8e5837" />
@@ -120,11 +121,7 @@ Required values:
 
 ## Next Steps
 
-- Add integration tests for auth, RBAC, and tenant isolation
-- Improve frontend validation and error states
-- Add invite resend and token regeneration flows
-- Add project update and delete permissions
-- Prepare a production deployment path
+- Deploy to the cloud 
 
 ## Notes
 
