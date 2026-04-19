@@ -55,9 +55,11 @@ That means the backend remains the source of truth for data access even if the f
 
 - Working locally
 - Backend architecture is stable
-- Frontend is functional but still minimal
-- Not yet deployed
-- Not yet production hardened
+- Frontend is functional with a refactored UI
+- Full stack runs locally through Docker Compose
+- Basic production hardening is in place
+- Not yet deployed to a live environment
+- Not yet fully production hardened
 
 ## Run Locally
 
@@ -96,6 +98,38 @@ cd frontend
 npm run dev
 ```
 
+## Run With Docker
+
+1. Copy `.env.example` to `.env` and replace placeholder values.
+2. Build and start the full stack:
+
+```bash
+docker compose up --build -d
+```
+
+3. Open the app at `http://localhost:3000`.
+4. The backend API is available at `http://localhost:5000`.
+5. PostgreSQL is available at `localhost:5433`.
+
+Useful commands:
+
+```bash
+docker compose ps
+```
+
+```bash
+docker compose logs -f backend
+```
+
+```bash
+docker compose down
+```
+
+Notes:
+
+- The backend container runs migrations before starting the API.
+- The frontend build uses `NEXT_PUBLIC_API_URL`, which is baked into the Docker image during build time.
+
 ## Environment Variables
 
 The repo includes a tracked example file at `.env.example`. Real secrets must stay in an untracked `.env` file.
@@ -117,11 +151,17 @@ Required values:
 
 - `.env` is intentionally ignored and should never be committed.
 - Placeholder values in `.env.example` are safe to publish.
+- Basic hardening currently includes `helmet`, auth rate limiting, structured backend logging, and container health checks.
 - This repository is meant for learning and portfolio use, not direct production deployment without further hardening.
 
 ## Next Steps
 
 - Deploy to the cloud 
+
+## Production Planning
+
+- Target production architecture: [docs/production-target-architecture.md](docs/production-target-architecture.md)
+- Deployment runbook: [docs/deployment-runbook.md](docs/deployment-runbook.md)
 
 ## Notes
 
