@@ -2,6 +2,25 @@
 
 A full-stack multi-tenant SaaS example built with Node.js, Express, PostgreSQL, and Next.js. The project focuses on tenant isolation, role-based access control, invitation onboarding, and the backend patterns commonly used in real SaaS products.
 
+## AWS Deployment Highlight
+
+This project has been deployed in a hybrid cloud setup using:
+
+- `Frontend`: Vercel
+- `Backend`: AWS ECS Fargate
+- `Database`: AWS RDS PostgreSQL
+- `Container registry`: Amazon ECR
+- `Load balancing`: Application Load Balancer
+- `Logs`: CloudWatch Logs
+
+Deployment outcome:
+
+- the backend was deployed successfully to AWS and exposed through an ALB
+- production database migrations were executed successfully against RDS
+- the backend `/health` endpoint responded publicly from the live AWS environment
+- the frontend was deployed to Vercel
+- the remaining production gap is HTTPS on the backend ALB so the browser can call the API from the deployed frontend
+
 ## What This Project Demonstrates
 
 - Multi-tenant application design with shared infrastructure
@@ -9,8 +28,20 @@ A full-stack multi-tenant SaaS example built with Node.js, Express, PostgreSQL, 
 - Invitation-driven onboarding flow
 - Membership-based RBAC across multiple tenants
 - Separation between frontend concerns and backend trust boundaries
+- Containerized backend deployment to AWS ECS Fargate
+- Managed PostgreSQL migration to AWS RDS
+- Load balancer health checks and cloud runtime verification
 
 ## Screenshots
+
+### ECS Backend Service Running
+![alt text](<Screenshot 2026-05-05 171524.png>)
+
+### AWS Target Group Healthy
+![alt text](<Screenshot 2026-05-05 171543.png>)
+
+### Live Backend Health Check
+![alt text](<Screenshot 2026-05-05 171249.png>)
 
 ### Dashboard
 <img width="2879" height="1632" alt="Screenshot 2026-04-03 202505" src="https://github.com/user-attachments/assets/c2852273-bb1a-496b-9115-8aa890d4e0ee" />
@@ -58,7 +89,11 @@ That means the backend remains the source of truth for data access even if the f
 - Frontend is functional with a refactored UI
 - Full stack runs locally through Docker Compose
 - Basic production hardening is in place
-- Not yet deployed to a live environment
+- Backend deployed successfully to AWS ECS Fargate
+- Database migrated successfully to AWS RDS PostgreSQL
+- Frontend deployed successfully to Vercel
+- Public backend health endpoint verified through ALB
+- Full browser-based production flow still needs HTTPS on the backend
 - Not yet fully production hardened
 
 ## Run Locally
@@ -156,7 +191,10 @@ Required values:
 
 ## Next Steps
 
-- Deploy to the cloud 
+- Add HTTPS to the backend ALB with ACM and a custom domain
+- Move runtime secrets to AWS Secrets Manager or SSM Parameter Store
+- Separate ALB, ECS, and RDS security groups more cleanly
+- Optionally add Infrastructure as Code for repeatable cloud setup
 
 ## Production Planning
 
