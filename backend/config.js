@@ -19,9 +19,19 @@ function requireEnv(name) {
   return value.trim();
 }
 
+function parseBoolean(value, defaultValue = false) {
+  if (value == null || value === '') {
+    return defaultValue;
+  }
+
+  return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
+}
+
 const defaultCorsOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000'];
 const configuredCorsOrigins = parseList(process.env.CORS_ORIGIN);
 const isTest = process.env.NODE_ENV === 'test';
+const useDbSsl = parseBoolean(process.env.DB_SSL);
+const rejectUnauthorized = parseBoolean(process.env.DB_SSL_REJECT_UNAUTHORIZED, true);
 
 const config = {
   serverPort: Number(process.env.SERVER_PORT || 5000),
@@ -33,6 +43,13 @@ const config = {
     user: requireEnv('POSTGRES_USER'),
     password: requireEnv('POSTGRES_PASSWORD'),
     database: isTest ? process.env.TEST_POSTGRES_DB || 'saas_test' : requireEnv('POSTGRES_DB'),
+    ...(useDbSsl
+      ? {
+          ssl: {
+            rejectUnauthorized,
+          },
+        }
+      : {}),
   },
   jwtSecret: requireEnv('JWT_SECRET'),
 };

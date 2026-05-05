@@ -376,3 +376,193 @@ To support this runbook even better, the next repo tasks should be:
 2. add a short ECS deployment checklist to the README
 3. decide whether to keep current auth for the first live demo or upgrade to cookie-based auth
 4. optionally add Terraform or CDK after the first successful deployment
+
+## 22. Deployment Retrospective
+
+This section captures what happened during the first AWS deployment attempt, what broke, how it was fixed, and what was successfully completed.
+
+### What We Successfully Deployed
+
+- `RDS PostgreSQL` instance created in AWS
+- `ECR` repository created and backend image pushed successfully
+- `ECS` cluster created
+- backend task definition created and updated through multiple revisions
+- database migrations executed successfully against RDS
+- backend ECS service created behind an `Application Load Balancer`
+- ALB target became healthy
+- backend health endpoint responded successfully at `/health`
+- frontend deployed to `Vercel`
+
+### Main Problems Encountered
+
+#### 1. AWS CLI credentials were invalid
+
+Problem:
+
+- local AWS CLI calls failed with invalid security token errors
+- Docker could not authenticate to ECR
+
+Fix:
+
+- created a new IAM access key for the admin IAM user
+- configured the AWS CLI again with the new access key, secret key, and `ap-southeast-2`
+- verified access with:
+
+```bash
+aws sts get-caller-identity
+```
+
+#### 2. RDS security group naming confusion
+
+Problem:
+
+- AWS rejected a new security group name starting with `sg-`
+
+Fix:
+
+- use normal names like `saasportfolio-rds`
+- do not name custom security groups with the `sg-` prefix because AWS reserves that format for IDs
+
+#### 3. ECS cluster creation initially failed
+
+Problem:
+
+- ECS reported issues with the ECS service-linked role
+- a failed cluster creation also left behind a CloudFormation stack with the same name
+
+Fix:
+
+- confirmed `AWSServiceRoleForECS` existed
+- deleted the failed CloudFormation stack
+- recreated the cluster successfully
+
+#### 4. Migration task failed repeatedly with Knex connection timeouts
+
+Problem:
+
+- migrations started but could not acquire a PostgreSQL connection
+- this looked like a Knex issue at first, but it was really networking
+
+Fix:
+
+- identified that the ECS task and RDS were not actually operating in the same usable VPC/security-group path
+- confirmed the real RDS VPC from AWS CLI output
+- created a new ECS security group in the same VPC as the database
+- reran the ECS migration task in the correct VPC and subnets
+- after that, migrations succeeded
+
+Important lesson:
+
+- do not assume the VPC shown in one part of the console is the same VPC actually attached to the RDS security group
+- verify VPC IDs directly when ECS-to-RDS traffic times out
+
+#### 5. RDS PostgreSQL required SSL-aware app configuration
+
+Problem:
+
+- RDS PostgreSQL 18 required a deployment path compatible with SSL expectations
+
+Fix:
+
+- added optional database SSL support to backend config
+- added:
+  - `DB_SSL`
+  - `DB_SSL_REJECT_UNAUTHORIZED`
+- used:
+  - `DB_SSL=true`
+  - `DB_SSL_REJECT_UNAUTHORIZED=false`
+
+For a stricter production setup later, mount and trust the RDS CA bundle instead of disabling certificate verification.
+
+#### 6. ECS service health checks timed out even after the app was running
+
+Problem:
+
+- ECS service tasks were running
+- target group still showed `Unhealthy` with request timeouts
+
+Fix:
+
+- identified that the ALB could not reach the container on port `5000`
+- added the required inbound security group rule to allow ALB-to-ECS traffic on `5000`
+- target group then became healthy
+
+Important lesson:
+
+- healthy ECS tasks do not guarantee a healthy ALB target
+- the ALB security path to the task container port must be explicitly allowed
+
+#### 7. Frontend-to-backend requests failed in the browser due to mixed content
+
+Problem:
+
+- Vercel frontend was served over `https`
+- backend ALB endpoint was only `http`
+- browser blocked requests as mixed content
+
+Fix:
+
+- no full fix was implemented during this deployment session
+- the correct long-term fix is:
+  - acquire a custom domain
+  - request an ACM certificate
+  - add an HTTPS listener to the ALB
+  - update frontend/backend environment variables to use the HTTPS backend URL
+
+This was the final remaining gap preventing full browser-based end-to-end production behavior.
+
+### Key Environment Values Used
+
+Backend runtime values used in ECS included:
+
+- `SERVER_PORT=5000`
+- `DB_HOST=<rds-endpoint>`
+- `DB_PORT=5432`
+- `DB_SSL=true`
+- `DB_SSL_REJECT_UNAUTHORIZED=false`
+- `POSTGRES_USER=<db-user>`
+- `POSTGRES_PASSWORD=<db-password>`
+- `POSTGRES_DB=saas_prod`
+- `JWT_SECRET=<random-secret>`
+- `FRONTEND_URL=<vercel-url>`
+- `CORS_ORIGIN=<vercel-url>`
+
+Frontend runtime value used in Vercel:
+
+- `NEXT_PUBLIC_API_URL=http://<alb-dns-name>`
+
+### Current Final State
+
+At the end of this deployment effort:
+
+- the database was running in RDS
+- the backend was running in ECS Fargate
+- the backend was reachable through the ALB
+- the backend health check passed publicly
+- the frontend was deployed on Vercel
+- browser login flow was still blocked by the backend not yet serving HTTPS
+
+### Recommended Next Time
+
+If repeating this deployment later, use this order:
+
+1. create RDS first
+2. confirm the actual RDS VPC and subnet group
+3. create ECS security groups in the exact same VPC
+4. push backend image to ECR
+5. create ECS task definition with DB env vars and SSL flags
+6. run one-off migration task
+7. create ECS service and ALB
+8. confirm target group health and `/health`
+9. deploy frontend to Vercel
+10. only then wire frontend/backend production URLs
+11. if browser use is required, finish HTTPS on the backend before calling deployment complete
+
+### Security Follow-Up
+
+After any future deployment like this:
+
+- rotate any secrets that were ever pasted into terminals, chat, or screenshots
+- enable MFA on the IAM user used for deployment
+- move runtime secrets into `Secrets Manager` or `SSM Parameter Store`
+- separate ALB, ECS, and RDS security groups cleanly instead of relying on defaults
