@@ -163,3 +163,42 @@ export function deleteMemberRequest(membershipId) {
     });
 }
 
+export function assistantConversationsRequest() {
+    return apiRequest('/assistant/conversations');
+}
+
+export function assistantMessagesRequest(conversationId) {
+    return apiRequest(`/assistant/conversations/${conversationId}/messages`);
+}
+
+export function assistantChatRequest(payload) {
+    return apiRequest('/assistant/chat', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+}
+
+export function assistantKnowledgeRequest() {
+    return apiRequest('/assistant/knowledge');
+}
+
+export function createAssistantKnowledgeRequest(payload) {
+    return apiRequest('/assistant/knowledge', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
+}
+
+export function updateAssistantKnowledgeRequest(entryId, payload) {
+    return apiRequest(`/assistant/knowledge/${entryId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+    });
+}
+
+export function deleteAssistantKnowledgeRequest(entryId) {
+    return apiRequest(`/assistant/knowledge/${entryId}`, {
+        method: 'DELETE',
+    });
+}
+

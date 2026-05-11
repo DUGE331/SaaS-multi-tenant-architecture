@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const authRateLimit = require('./middleware/authRateLimit');
 const config = require('./config');
 const { httpLogger, logger } = require('./logger');
+const assistantRoutes = require('./routes/assistant');
 const authRoutes = require('./routes/authRoutes');
 const invitationRoutes = require('./routes/invitations');
 const membershipRoutes = require('./routes/memberships');
@@ -34,6 +35,7 @@ app.get('/health', (req, res) => {
 app.use('/auth/login', authRateLimit);
 app.use('/auth/register', authRateLimit);
 app.use('/auth', authRoutes);
+app.use('/assistant', assistantRoutes);
 app.use('/invitations', invitationRoutes);
 app.use('/memberships', membershipRoutes);
 app.use('/projects', projectRoutes);

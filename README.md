@@ -71,6 +71,20 @@ Deployment outcome:
 - `/auth/me` endpoint for server-verified session state
 - Member management for adding, updating, and removing users
 - Support for users belonging to multiple tenants with different roles
+- Secure internal AI assistant backed by AWS Bedrock
+
+## Secure Internal AI Assistant
+
+`SekuroChat-lite` is a tenant-aware internal assistant embedded into the SaaS platform rather than a generic chatbot bolted onto the side.
+
+It currently demonstrates:
+
+- tenant-scoped knowledge entries managed by `owner` and `admin` roles
+- private assistant conversations scoped by both `tenant_id` and `created_by_user_id`
+- AWS Bedrock integration behind a provider abstraction
+- backend-first security controls including validation, rate limiting, quota checks, prompt-abuse rejection, and metadata-only usage events
+
+The assistant currently uses curated tenant knowledge plus lightweight project context. It does not use vector search, unrestricted database access, or cross-tenant context.
 
 ## Architecture Note
 
@@ -181,6 +195,43 @@ Required values:
 - `POSTGRES_PASSWORD`
 - `POSTGRES_DB`
 - `JWT_SECRET`
+
+Assistant-related values:
+
+- `AI_ASSISTANT_ENABLED`
+- `AI_PROVIDER`
+- `AI_BEDROCK_REGION`
+- `AI_BEDROCK_MODEL_ID`
+- `AI_BEDROCK_INFERENCE_PROFILE_ID`
+- `AI_SYSTEM_PROMPT`
+- `AI_MAX_INPUT_MESSAGES`
+- `AI_MAX_KNOWLEDGE_ITEMS`
+- `AI_MAX_RESPONSE_TOKENS`
+- `AI_TEMPERATURE`
+- `AI_MAX_USER_REQUESTS_PER_WINDOW`
+- `AI_MAX_TENANT_REQUESTS_PER_WINDOW`
+- `AI_MAX_TENANT_REQUESTS_PER_DAY`
+
+## Assistant Security
+
+The internal assistant is designed as a tenant-aware workspace feature rather than a general chatbot.
+
+Current security controls include:
+
+- assistant routes require authentication
+- knowledge management is limited to `owner` and `admin`
+- assistant conversations are scoped by both `tenant_id` and `created_by_user_id`
+- assistant prompt inputs are validated and size-limited
+- assistant usage is rate-limited at both user and tenant levels
+- daily tenant assistant usage is capped through metadata-only usage events
+- prompt injection attempts targeting hidden instructions, secrets, or cross-tenant access are rejected
+- backend logs redact sensitive assistant request fields and authorization headers
+- assistant usage persistence stores metadata only, not token secrets or raw audit copies of prompts outside chat history
+
+Current limitation:
+
+- assistant conversations still persist full chat content as product data, so users should not paste passwords, API keys, or sensitive personal information into the assistant
+- some Bedrock models in `ap-southeast-2` require an inference profile rather than direct on-demand model invocation, so local or cloud runtime config may need `AI_BEDROCK_INFERENCE_PROFILE_ID`
 
 ## Security Notes
 

@@ -86,6 +86,18 @@ Important production notes:
 - `CORS_ORIGIN` should be the exact frontend origin, not `localhost`
 - `JWT_SECRET` should be long, random, and never committed
 
+If you deploy the assistant feature with AWS Bedrock enabled, also provide:
+
+- `AI_ASSISTANT_ENABLED=true`
+- `AI_PROVIDER=bedrock`
+- `AI_BEDROCK_REGION=<bedrock-region>`
+- `AI_BEDROCK_MODEL_ID=<bedrock-model-id>`
+- `AI_BEDROCK_INFERENCE_PROFILE_ID=<optional-profile-id>`
+
+Important assistant note:
+
+- some Bedrock models require invocation through an inference profile rather than direct on-demand model access, so `AI_BEDROCK_INFERENCE_PROFILE_ID` may be required depending on the selected model
+
 ## 5. AWS Resources to Create
 
 For the recommended first deployment, create:
@@ -202,6 +214,8 @@ You can also store:
 - `CORS_ORIGIN`
 
 For a small deployment, it is acceptable to keep non-secret config directly in ECS task definition env vars and keep only sensitive values in Parameter Store or Secrets Manager.
+
+If the assistant is enabled in AWS, ensure the ECS task role also has Bedrock runtime invoke permissions for the selected model or inference profile.
 
 ## 11. Step 5: Create the ECS Task Definition
 

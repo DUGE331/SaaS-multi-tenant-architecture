@@ -2,6 +2,11 @@ import { moduleLabels } from './moduleLabels';
 
 export const navigation = [
   {
+    key: 'assistant',
+    label: moduleLabels.assistant,
+    href: '/assistant',
+  },
+  {
     key: 'dashboard',
     label: moduleLabels.dashboard,
     href: '/',

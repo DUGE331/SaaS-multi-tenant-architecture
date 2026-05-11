@@ -7,6 +7,20 @@ const logger = pino({
   enabled: !isTest,
   level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
   timestamp: pino.stdTimeFunctions.isoTime,
+  redact: {
+    paths: [
+      'req.headers.authorization',
+      'req.headers.cookie',
+      'req.body.message',
+      'req.body.content',
+      'req.body.password',
+      'req.body.POSTGRES_PASSWORD',
+      'req.body.JWT_SECRET',
+      'headers.authorization',
+      'headers.cookie',
+    ],
+    censor: '[REDACTED]',
+  },
 });
 
 const httpLogger = pinoHttp({
