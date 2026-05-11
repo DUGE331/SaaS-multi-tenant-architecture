@@ -53,6 +53,17 @@ Deployment outcome:
 ### Database / Tenant Isolation
 <img width="2879" height="1799" alt="Database isolation screenshot" src="https://github.com/user-attachments/assets/eace2fc7-60bb-4b76-a6dc-7746da8e5837" />
 
+### Bedrock Assistant Returning Tenant-Scoped Response
+<img width="2848" height="1598" alt="Screenshot 2026-05-11 100241" src="https://github.com/user-attachments/assets/7bfda350-35c9-4f75-adb1-f11299c069bd" />
+
+### Prompt Injection Attempt Safely Rejected
+<img width="2834" height="1526" alt="Screenshot 2026-05-11 100716" src="https://github.com/user-attachments/assets/d57a26ab-9124-44b0-9e2c-9a88aac83ace" />
+<img width="1340" height="1306" alt="Screenshot 2026-05-11 100640" src="https://github.com/user-attachments/assets/6f8c1591-9208-4b5d-b244-84bc6606fea7" />
+
+### Responding without context
+<img width="1274" height="1214" alt="Screenshot 2026-05-11 100738" src="https://github.com/user-attachments/assets/ae453260-0ffe-469e-9c1f-48543ffe1b07" />
+
+
 ## Tech Stack
 
 - Frontend: Next.js
