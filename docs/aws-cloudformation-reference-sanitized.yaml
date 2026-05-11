@@ -1,0 +1,337 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Sanitized CloudFormation reference generated from the deployed SaaS AWS stack and cleaned for documentation use."
+
+Metadata:
+  Notes:
+    - "This is a sanitized reference template for portfolio/documentation purposes."
+    - "It is not a guaranteed one-click redeploy template without further cleanup."
+    - "Secrets, account-specific identifiers, and deployment-specific values were replaced with placeholders."
+
+Resources:
+  BedrockInvokePolicy:
+    DeletionPolicy: Retain
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: BedrockInvokePolicy
+      Path: /
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - bedrock:InvokeModel
+              - bedrock:InvokeModelWithResponseStream
+            Resource: "*"
+
+  EcsSecurityGroup:
+    DeletionPolicy: Retain
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Security group for ECS tasks and ALB path"
+      GroupName: "saasportfolio-ecs-db-vpc"
+      VpcId: "<VPC_ID>"
+      SecurityGroupIngress:
+        - CidrIp: "0.0.0.0/0"
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+        - SourceSecurityGroupId: "<ECS_SECURITY_GROUP_ID>"
+          SourceSecurityGroupOwnerId: "<ACCOUNT_ID>"
+          FromPort: 5000
+          IpProtocol: tcp
+          ToPort: 5000
+      SecurityGroupEgress:
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: "-1"
+
+  LegacyDefaultSecurityGroup:
+    DeletionPolicy: Retain
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Default VPC security group used during deployment troubleshooting"
+      GroupName: "default"
+      VpcId: "<DB_VPC_ID>"
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: "<DEFAULT_SECURITY_GROUP_ID>"
+          SourceSecurityGroupOwnerId: "<ACCOUNT_ID>"
+          FromPort: 5432
+          IpProtocol: tcp
+          ToPort: 5432
+        - SourceSecurityGroupId: "<ECS_SECURITY_GROUP_ID>"
+          SourceSecurityGroupOwnerId: "<ACCOUNT_ID>"
+          FromPort: 5432
+          IpProtocol: tcp
+          ToPort: 5432
+        - SourceSecurityGroupId: "<ECS_SECURITY_GROUP_ID>"
+          SourceSecurityGroupOwnerId: "<ACCOUNT_ID>"
+          FromPort: 5000
+          IpProtocol: tcp
+          ToPort: 5000
+      SecurityGroupEgress:
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: "-1"
+
+  RdsSecurityGroup:
+    DeletionPolicy: Retain
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Security group for RDS PostgreSQL"
+      GroupName: "saasportfolio-rds"
+      VpcId: "<DB_VPC_ID>"
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: "<APP_DATABASE_SOURCE_SECURITY_GROUP_ID>"
+          SourceSecurityGroupOwnerId: "<ACCOUNT_ID>"
+          FromPort: 5432
+          IpProtocol: tcp
+          ToPort: 5432
+      SecurityGroupEgress:
+        - CidrIp: "0.0.0.0/0"
+          IpProtocol: "-1"
+
+  BackendRepository:
+    DeletionPolicy: Retain
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: saasportfolio-backend
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      ImageTagMutability: MUTABLE
+
+  BackendLoadBalancer:
+    DeletionPolicy: Retain
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: alb-saasportfolio-backend
+      Scheme: internet-facing
+      Type: application
+      Subnets:
+        - "<PUBLIC_SUBNET_A>"
+        - "<PUBLIC_SUBNET_B>"
+        - "<PUBLIC_SUBNET_C>"
+      SecurityGroups:
+        - !Ref EcsSecurityGroup
+        - "<DEFAULT_SECURITY_GROUP_ID>"
+      IpAddressType: ipv4
+      LoadBalancerAttributes:
+        - Key: access_logs.s3.enabled
+          Value: "false"
+        - Key: idle_timeout.timeout_seconds
+          Value: "60"
+        - Key: deletion_protection.enabled
+          Value: "false"
+        - Key: load_balancing.cross_zone.enabled
+          Value: "true"
+        - Key: routing.http2.enabled
+          Value: "true"
+
+  BackendTargetGroup:
+    DeletionPolicy: Retain
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: tg-saasportfolio-backend
+      Port: 5000
+      Protocol: HTTP
+      TargetType: ip
+      VpcId: "<VPC_ID>"
+      HealthCheckEnabled: true
+      HealthCheckPath: /health
+      HealthCheckProtocol: HTTP
+      Matcher:
+        HttpCode: "200"
+
+  BackendListener:
+    DeletionPolicy: Retain
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref BackendLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref BackendTargetGroup
+
+  BackendCluster:
+    DeletionPolicy: Retain
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: ecs-saasportfolio-cluster
+      CapacityProviders:
+        - FARGATE
+        - FARGATE_SPOT
+
+  BackendExecutionRole:
+    DeletionPolicy: Retain
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: ecsTaskExecutionRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      MaxSessionDuration: 3600
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  BackendTaskRole:
+    DeletionPolicy: Retain
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      RoleName: saasportfolio-backend-task-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      MaxSessionDuration: 3600
+      ManagedPolicyArns:
+        - !Ref BedrockInvokePolicy
+      Description: Allows ECS tasks to call AWS services on your behalf.
+
+  BackendTaskDefinition:
+    DeletionPolicy: Retain
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: saasportfolio-backend
+      ExecutionRoleArn: !GetAtt BackendExecutionRole.Arn
+      TaskRoleArn: !GetAtt BackendTaskRole.Arn
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: "512"
+      Memory: "1024"
+      ContainerDefinitions:
+        - Name: saasportfolio-backend
+          Essential: true
+          Image: "<ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/saasportfolio-backend:latest"
+          PortMappings:
+            - ContainerPort: 5000
+              HostPort: 5000
+              Protocol: tcp
+          Environment:
+            - Name: POSTGRES_USER
+              Value: "<DB_USERNAME>"
+            - Name: SERVER_PORT
+              Value: "5000"
+            - Name: DB_SSL
+              Value: "true"
+            - Name: DB_PORT
+              Value: "5432"
+            - Name: JWT_SECRET
+              Value: "<REPLACE_ME>"
+            - Name: POSTGRES_PASSWORD
+              Value: "<REPLACE_ME>"
+            - Name: NODE_ENV
+              Value: production
+            - Name: POSTGRES_DB
+              Value: "<DB_NAME>"
+            - Name: DB_HOST
+              Value: "<RDS_ENDPOINT>"
+            - Name: DB_SSL_REJECT_UNAUTHORIZED
+              Value: "false"
+            - Name: CORS_ORIGIN
+              Value: "<FRONTEND_URL>"
+            - Name: FRONTEND_URL
+              Value: "<FRONTEND_URL>"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/saasportfolio-backend
+              awslogs-create-group: "true"
+              awslogs-region: "<REGION>"
+              awslogs-stream-prefix: ecs
+
+  BackendService:
+    DeletionPolicy: Retain
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: saasportfolio-backend-service-qg3a9rg7
+      Cluster: !GetAtt BackendCluster.Arn
+      TaskDefinition: !Ref BackendTaskDefinition
+      DesiredCount: 1
+      PlatformVersion: LATEST
+      SchedulingStrategy: REPLICA
+      HealthCheckGracePeriodSeconds: 30
+      CapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+          Base: 0
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      DeploymentController:
+        Type: ECS
+      LoadBalancers:
+        - TargetGroupArn: !Ref BackendTargetGroup
+          ContainerName: saasportfolio-backend
+          ContainerPort: 5000
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - "<DEFAULT_SECURITY_GROUP_ID>"
+            - !Ref EcsSecurityGroup
+          Subnets:
+            - "<PUBLIC_SUBNET_A>"
+            - "<PUBLIC_SUBNET_B>"
+            - "<PUBLIC_SUBNET_C>"
+
+  BackendDatabase:
+    DeletionPolicy: Retain
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: rds-saasportfolio-postgres
+      AllocatedStorage: 20
+      DBInstanceClass: db.t4g.micro
+      Engine: postgres
+      EngineVersion: "18.3"
+      MasterUsername: "<DB_USERNAME>"
+      MasterUserPassword: "<REPLACE_ME>"
+      DBName: "<DB_NAME>"
+      PubliclyAccessible: false
+      MultiAZ: false
+      StorageType: gp2
+      Port: 5432
+      StorageEncrypted: true
+      KmsKeyId: "<KMS_KEY_ARN>"
+      DBSubnetGroupName: "<DB_SUBNET_GROUP_NAME>"
+      VPCSecurityGroups:
+        - "<RDS_SECURITY_GROUP_ID>"
+      BackupRetentionPeriod: 1
+      CopyTagsToSnapshot: true
+      MonitoringInterval: 0
+      EnableIAMDatabaseAuthentication: false
+      EnablePerformanceInsights: true
+      PerformanceInsightsKMSKeyId: "<KMS_KEY_ARN>"
+      PerformanceInsightsRetentionPeriod: 7
+      DeletionProtection: false
+      MaxAllocatedStorage: 1000
+      DBParameterGroupName: "<DB_PARAMETER_GROUP_NAME>"
+      OptionGroupName: "<OPTION_GROUP_NAME>"
+      EnableCloudwatchLogsExports:
+        - postgresql
+      CACertificateIdentifier: rds-ca-rsa2048-g1
+      Tags:
+        - Key: project
+          Value: SaaSPortfolio
+        - Key: environment
+          Value: prod
+        - Key: owner
+          Value: "<OWNER_NAME>"
+
+  BackendLogGroup:
+    DeletionPolicy: Retain
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/saasportfolio-backend
